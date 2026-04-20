@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AOS Monitor — Detección de Apnea del Sueño</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════
+   VARIABLES Y RESET
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:         #F7FAFC;
+  --white:      #FFFFFF;
+  --accent:     #2A6496;
+  --accent-hv:  #1E4D72;
+  --accent-lt:  #D6E8F5;
+  --accent-xl:  #EBF4FA;
+  --border:     #7AAFC5;
+  --sep:        #E0EBF2;
+  --txt-pri:    #1A2E3B;
+  --txt-sec:    #5A7A8A;
+  --txt-btn:    #FFFFFF;
+  --ok:         #27AE60;
+  --warn:       #B07020;
+  --crit:       #A02020;
+  --err:        #C0392B;
+  --shadow-sm:  0 1px 4px rgba(42,100,150,0.08);
+  --shadow-md:  0 4px 16px rgba(42,100,150,0.12);
+  --shadow-lg:  0 8px 32px rgba(42,100,150,0.16);
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt-pri)}
+button{cursor:pointer;border:none;outline:none;font-family:inherit}
+input,textarea{font-family:inherit;outline:none}
+
+/* ═══════════════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════════════ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--sep)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══════════════════════════════════════════════════════
+   PANTALLAS (SPA)
+═══════════════════════════════════════════════════════ */
+.screen{display:none;width:100%;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* ═══════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:28px;right:28px;z-index:9999;
+  background:var(--txt-pri);color:#fff;
+  padding:12px 20px;border-radius:var(--radius-md);
+  font-size:14px;font-weight:500;letter-spacing:0.01em;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .3s,transform .3s;pointer-events:none;
+  max-width:320px;box-shadow:var(--shadow-lg)
+}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.ok{background:var(--ok)}
+#toast.err{background:var(--err)}
+
+/* ═══════════════════════════════════════════════════════
+   LOGIN
+═══════════════════════════════════════════════════════ */
+#screen-login{
+  align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#EBF4FA 0%,#F7FAFC 50%,#D6E8F5 100%);
+  position:relative;overflow:hidden
+}
+#screen-login::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(42,100,150,0.06) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(122,175,197,0.08) 0%, transparent 55%);
+}
+.login-card{
+  position:relative;z-index:1;
+  background:var(--white);border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);
+  padding:48px 52px;width:420px;max-width:92vw;
+  border:1px solid var(--sep)
+}
+.login-logo{
+  display:flex;align-items:center;gap:12px;margin-bottom:32px
+}
+.login-logo-icon{
+  width:46px;height:46px;
+  background:var(--accent);border-radius:10px;
+  display:flex;align-items:center;justify-content:center
+}
+.login-logo-icon svg{width:26px;height:26px;fill:white}
+.login-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--txt-pri);line-height:1.1}
+.login-sub{font-size:13px;color:var(--txt-sec);margin-top:2px}
+.login-card h2{font-size:15px;font-weight:600;margin-bottom:20px;color:var(--txt-sec);letter-spacing:0.03em;text-transform:uppercase}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--txt-sec);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+.field input{
+  width:100%;padding:11px 14px;
+  border:1.5px solid var(--sep);border-radius:var(--radius-sm);
+  font-size:14px;color:var(--txt-pri);background:var(--bg);
+  transition:border-color .2s,box-shadow .2s
+}
+.field input:focus{border-color:var(--border);box-shadow:0 0 0 3px var(--accent-xl)}
+.btn-primary{
+  width:100%;padding:13px;
+  background:var(--accent);color:var(--txt-btn);
+  border-radius:var(--radius-sm);font-size:14px;font-weight:600;
+  letter-spacing:0.02em;transition:background .2s,transform .1s,box-shadow .2s;
+  box-shadow:0 2px 8px rgba(42,100,150,0.25)
+}
+.btn-primary:hover{background:var(--accent-hv);box-shadow:0 4px 14px rgba(42,100,150,0.35)}
+.btn-primary:active{transform:scale(0.98)}
+.login-err{
+  color:var(--err);font-size:13px;
+  margin-top:12px;padding:10px 12px;
+  background:#FEF5F5;border-radius:var(--radius-sm);
+  border-left:3px solid var(--err);display:none
+}
+.login-loading{display:none;text-align:center;color:var(--txt-sec);font-size:13px;margin-top:10px}
+
+/* ═══════════════════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════════════════ */
+.topbar{
+  height:56px;background:var(--white);
+  border-bottom:1px solid var(--sep);
+  display:flex;align-items:center;padding:0 24px;gap:16px;
+  box-shadow:var(--shadow-sm);flex-shrink:0;position:sticky;top:0;z-index:100
+}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.topbar-logo-icon{
+  width:32px;height:32px;background:var(--accent);border-radius:7px;
+  display:flex;align-items:center;justify-content:center
+}
+.topbar-logo-icon svg{width:18px;height:18px;fill:white}
+.topbar-brand{font-family:'Playfair Display',serif;font-size:17px;color:var(--txt-pri)}
+.topbar-sep{flex:1}
+.topbar-breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--txt-sec)}
+.topbar-breadcrumb span{color:var(--txt-pri);font-weight:500}
+.topbar-breadcrumb .sep{color:var(--sep)}
+.topbar-btn-back{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:var(--accent);
+  background:var(--accent-xl);border:1px solid var(--accent-lt);
+  transition:all .2s
+}
+.topbar-btn-back:hover{background:var(--accent-lt)}
+.topbar-user{
+  display:flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--txt-sec)
+}
+.topbar-avatar{
+  width:30px;height:30px;background:var(--accent-lt);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--accent)
+}
+.btn-logout{
+  padding:5px 12px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;color:var(--txt-sec);
+  background:transparent;border:1px solid var(--sep);
+  transition:all .2s
+}
+.btn-logout:hover{background:var(--sep);color:var(--txt-pri)}
+
+/* ═══════════════════════════════════════════════════════
+   PACIENTES
+═══════════════════════════════════════════════════════ */
+.page-content{flex:1;overflow-y:auto;padding:28px 32px}
+.page-header{margin-bottom:24px}
+.page-header h1{
+  font-family:'Playfair Display',serif;font-size:26px;
+  color:var(--txt-pri);line-height:1.2
+}
+.page-header p{font-size:14px;color:var(--txt-sec);margin-top:4px}
+
+.search-bar{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:20px
+}
+.search-wrap{
+  position:relative;flex:1;max-width:400px
+}
+.search-wrap input{
+  width:100%;padding:10px 14px 10px 38px;
+  border:1.5px solid var(--sep);border-radius:var(--radius-md);
+  font-size:14px;background:var(--white);transition:border-color .2s,box-shadow .2s
+}
+.search-wrap input:focus{border-color:var(--border);box-shadow:0 0 0 3px var(--accent-xl)}
+.search-wrap svg{
+  position:absolute;left:11px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;stroke:var(--txt-sec)
+}
+.btn-refresh{
+  padding:9px 16px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:var(--accent);
+  background:var(--white);border:1.5px solid var(--accent-lt);
+  display:flex;align-items:center;gap:6px;transition:all .2s
+}
+.btn-refresh:hover{background:var(--accent-xl)}
+
+.table-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1px solid var(--sep);overflow:hidden;
+  box-shadow:var(--shadow-sm)
+}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--accent-xl);border-bottom:1.5px solid var(--accent-lt)}
+thead th{
+  padding:12px 16px;font-size:11.5px;font-weight:700;
+  color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;
+  text-align:left;white-space:nowrap
+}
+tbody tr{border-bottom:1px solid var(--sep);transition:background .15s;cursor:pointer}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--accent-xl)}
+tbody td{padding:13px 16px;font-size:13.5px;color:var(--txt-pri)}
+tbody td.sec{color:var(--txt-sec)}
+.badge{
+  display:inline-flex;align-items:center;
+  padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600
+}
+.badge-m{background:#FFF3E0;color:#B07020}
+.badge-f{background:#FCE4EC;color:#C62828}
+.empty-state{padding:60px 20px;text-align:center;color:var(--txt-sec);font-size:14px}
+.empty-state svg{width:48px;height:48px;stroke:var(--sep);margin-bottom:12px}
+
+/* Spinner */
+.spinner{
+  width:40px;height:40px;margin:60px auto;
+  border:3px solid var(--sep);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .8s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══════════════════════════════════════════════════════
+   HORAS (TARJETAS)
+═══════════════════════════════════════════════════════ */
+.summary-bar{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+  margin-bottom:24px
+}
+.summary-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1px solid var(--sep);padding:16px 20px;
+  box-shadow:var(--shadow-sm)
+}
+.summary-card .label{font-size:11px;color:var(--txt-sec);font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+.summary-card .value{font-size:24px;font-weight:700;color:var(--txt-pri);margin-top:4px;line-height:1}
+.summary-card .sub{font-size:11px;color:var(--txt-sec);margin-top:3px}
+
+.horas-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:16px
+}
+.hora-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1.5px solid var(--sep);padding:20px;
+  cursor:pointer;transition:all .22s;
+  box-shadow:var(--shadow-sm);position:relative;overflow:hidden
+}
+.hora-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent-lt);transition:background .22s
+}
+.hora-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.hora-card:hover::before{background:var(--accent)}
+.hora-card-num{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em}
+.hora-card-time{font-size:15px;font-weight:600;color:var(--txt-pri);margin:6px 0 2px}
+.hora-card-range{font-size:12px;color:var(--txt-sec);margin-bottom:14px}
+.hora-card-count{font-size:28px;font-weight:700;color:var(--txt-pri);line-height:1}
+.hora-card-count-lbl{font-size:11.5px;color:var(--txt-sec);margin-bottom:14px}
+.severity-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:20px;
+  font-size:11.5px;font-weight:700;border:1px solid currentColor;
+  margin-top:auto
+}
+.sev-none{color:var(--ok);background:#F0FFF5;border-color:#A8DFBE}
+.sev-leve{color:#B07020;background:#FFF8ED;border-color:#F5CC84}
+.sev-moderado{color:#C06020;background:#FFF3E0;border-color:#F5AA70}
+.sev-grave{color:#C04020;background:#FFF0EE;border-color:#F0A090}
+.sev-muy-grave{color:var(--crit);background:#FFF0F0;border-color:#F0A0A0}
+
+/* ═══════════════════════════════════════════════════════
+   DETALLE HORA
+═══════════════════════════════════════════════════════ */
+.hour-tabs-row{
+  display:flex;gap:6px;padding:16px 32px 0;
+  overflow-x:auto;border-bottom:1px solid var(--sep);
+  background:var(--white);flex-shrink:0
+}
+.hour-tab{
+  padding:10px 16px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+  cursor:pointer;border:1px solid var(--sep);border-bottom:none;
+  background:var(--bg);transition:all .18s;white-space:nowrap;flex-shrink:0
+}
+.hour-tab:hover{background:var(--accent-xl);border-color:var(--accent-lt)}
+.hour-tab.active{background:var(--white);border-color:var(--border);border-bottom:1px solid var(--white);margin-bottom:-1px}
+.hour-tab-label{font-size:12px;font-weight:700;color:var(--txt-pri)}
+.hour-tab-range{font-size:11px;color:var(--accent)}
+.hour-tab-count{font-size:10.5px;color:var(--txt-sec)}
+
+.interr-table-wrap{padding:20px 32px}
+
+/* ═══════════════════════════════════════════════════════
+   INTERRUPCIÓN DETAIL
+═══════════════════════════════════════════════════════ */
+.interr-layout{display:flex;flex:1;overflow:hidden}
+.interr-sidebar{
+  width:300px;flex-shrink:0;
+  border-right:1px solid var(--sep);
+  overflow-y:auto;padding:20px;
+  display:flex;flex-direction:column;gap:14px;background:var(--white)
+}
+.interr-main{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px 20px;gap:12px}
+
+.info-card{
+  background:var(--white);border:1px solid var(--sep);
+  border-radius:var(--radius-md);overflow:hidden
+}
+.info-card-header{
+  padding:10px 14px;background:var(--accent-xl);
+  border-bottom:1px solid var(--accent-lt);
+  font-size:12px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.05em
+}
+.info-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+.info-row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.info-row .key{color:var(--txt-sec);font-weight:500}
+.info-row .val{color:var(--txt-pri);font-weight:600;text-align:right}
+.info-row .val.highlight{color:var(--ok);font-size:14px}
+.info-row .val.warn{color:var(--warn)}
+.info-row .val.crit{color:var(--crit)}
+
+.annotation-card{
+  background:var(--white);border:1px solid var(--sep);
+  border-radius:var(--radius-md);overflow:hidden;flex:1;display:flex;flex-direction:column
+}
+.annotation-card-header{
+  padding:10px 14px;background:var(--accent-xl);
+  border-bottom:1px solid var(--accent-lt);
+  font-size:12px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.05em
+}
+.annotation-card-body{padding:12px 14px;flex:1;display:flex;flex-direction:column;gap:8px}
+.annotation-card textarea{
+  width:100%;height:80px;padding:9px 11px;resize:none;
+  border:1.5px solid var(--sep);border-radius:var(--radius-sm);
+  font-size:13px;color:var(--txt-pri);background:var(--bg);
+  transition:border-color .2s
+}
+.annotation-card textarea:focus{border-color:var(--border)}
+.btn-save{
+  padding:9px 14px;background:var(--accent);color:white;
+  border-radius:var(--radius-sm);font-size:13px;font-weight:600;
+  transition:background .2s;display:flex;align-items:center;justify-content:center;gap:6px
+}
+.btn-save:hover{background:var(--accent-hv)}
+.history-list{flex:1;overflow-y:auto;border:1px solid var(--sep);border-radius:var(--radius-sm);background:var(--bg)}
+.history-item{
+  padding:8px 10px;cursor:pointer;font-size:12px;color:var(--txt-sec);
+  border-bottom:1px solid var(--sep);transition:background .15s;line-height:1.4
+}
+.history-item:last-child{border-bottom:none}
+.history-item:hover{background:var(--accent-xl);color:var(--txt-pri)}
+.history-label{font-size:10.5px;color:var(--txt-sec);margin-bottom:4px}
+
+/* APNEA TABS */
+.apnea-tabs-row{
+  display:flex;gap:5px;padding:0 20px;overflow-x:auto;
+  border-bottom:1px solid var(--sep);flex-shrink:0;background:var(--white)
+}
+.apnea-tab{
+  padding:8px 14px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;
+  cursor:pointer;border:1px solid transparent;border-bottom:none;
+  font-size:12px;font-weight:600;color:var(--txt-sec);
+  white-space:nowrap;flex-shrink:0;transition:all .15s
+}
+.apnea-tab:hover{background:var(--accent-xl);color:var(--accent)}
+.apnea-tab.active{
+  background:var(--white);border-color:var(--border);
+  color:var(--accent);margin-bottom:-1px
+}
+.apnea-tab .tab-time{font-size:10.5px;font-weight:400;color:var(--txt-sec);display:block;margin-top:1px}
+
+/* CHARTS */
+.chart-wrap{
+  background:var(--white);border:1px solid var(--sep);
+  border-radius:var(--radius-md);flex:1;min-height:0;
+  overflow:hidden;position:relative
+}
+.chart-label{
+  position:absolute;top:10px;left:14px;
+  font-size:11px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.07em;z-index:2
+}
+.charts-col{display:flex;flex-direction:column;flex:1;gap:10px;min-height:0}
+.chart-inner{position:relative;flex:1;min-height:80px}
+canvas.chart{width:100%!important;height:100%!important}
+
+.controls-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  background:var(--white);border:1px solid var(--sep);
+  border-radius:var(--radius-md);padding:10px 14px
+}
+.btn-ctrl{
+  padding:7px 14px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;color:var(--txt-btn);
+  background:var(--accent);transition:all .18s;
+  display:flex;align-items:center;gap:5px
+}
+.btn-ctrl:hover{background:var(--accent-hv)}
+.btn-ctrl:disabled{opacity:0.4;cursor:not-allowed}
+.btn-ctrl.danger{background:var(--err)}
+.btn-ctrl.danger:hover{background:#9B2020}
+.slider-row{display:flex;align-items:center;gap:8px;flex:1}
+.slider-row input[type=range]{flex:1;accent-color:var(--accent)}
+.slider-time{font-size:11.5px;color:var(--txt-sec);min-width:50px;text-align:right}
+.nav-arrows{display:flex;gap:4px;margin-left:auto}
+.nav-btn{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  background:var(--accent-xl);color:var(--accent);font-size:16px;font-weight:700;
+  border:1px solid var(--accent-lt);transition:all .15s;display:flex;align-items:center;justify-content:center
+}
+.nav-btn:hover{background:var(--accent-lt)}
+.nav-btn:disabled{opacity:0.3;cursor:not-allowed}
+
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════ */
+@media(max-width:900px){
+  .summary-bar{grid-template-columns:repeat(2,1fr)}
+  .interr-sidebar{width:260px}
+}
+@media(max-width:650px){
+  .page-content{padding:16px}
+  .summary-bar{grid-template-columns:1fr 1fr}
+  .interr-layout{flex-direction:column}
+  .interr-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--sep)}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════
+     PANTALLA: LOGIN
+══════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-4h2v2h-2zm0-12h2v10h-2z"/></svg>
+      </div>
+      <div>
+        <div class="login-title">AOS Monitor</div>
+        <div class="login-sub">Sistema de detección de apnea del sueño</div>
+      </div>
+    </div>
+    <h2>Acceso médico</h2>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="inp-user" placeholder="Ingrese su usuario" autocomplete="username"/>
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" id="btn-login">Iniciar sesión</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-loading" id="login-loading">Verificando credenciales…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: PACIENTES
+══════════════════════════════ -->
+<div id="screen-pacientes" class="screen">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-4h2v2h-2zm0-12h2v10h-2z"/></svg>
+      </div>
+      <span class="topbar-brand">AOS Monitor</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <div class="topbar-user">
+      <div class="topbar-avatar" id="topbar-avatar">DR</div>
+      <span id="topbar-username">Doctor</span>
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Pacientes registrados</h1>
+      <p>Seleccione un paciente para visualizar el monitoreo de su sesión de sueño</p>
+    </div>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="inp-buscar" placeholder="Buscar por nombre…"/>
+      </div>
+      <button class="btn-refresh" id="btn-refresh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Actualizar
+      </button>
+    </div>
+    <div class="table-card">
+      <div class="table-wrap">
+        <table id="tbl-pacientes">
+          <thead>
+            <tr>
+              <th>Nombre del paciente</th>
+              <th>Fecha estudio</th>
+              <th>Edad</th>
+              <th>Sexo</th>
+              <th>Enf. cardiovascular</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-pacientes-body">
+            <tr><td colspan="5"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: HORAS
+══════════════════════════════ -->
+<div id="screen-horas" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-horas">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Pacientes
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente"></span>
+      <span class="sep">›</span>
+      <span>Sesión de sueño</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-2">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1 id="horas-title">Sesión de sueño</h1>
+      <p>Resumen por hora — haga clic en una tarjeta para ver las interrupciones detectadas</p>
+    </div>
+    <div class="summary-bar" id="summary-bar"></div>
+    <div class="horas-grid" id="horas-grid">
+      <div style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: DETALLE HORA
+══════════════════════════════ -->
+<div id="screen-detalle" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-detalle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Horas
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-2"></span>
+      <span class="sep">›</span>
+      <span id="breadcrumb-hora">Interrupciones</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-3">Cerrar sesión</button>
+  </div>
+  <div class="hour-tabs-row" id="hour-tabs-row"></div>
+  <div class="interr-table-wrap" id="interr-table-wrap">
+    <div class="spinner"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: INTERRUPCIÓN
+══════════════════════════════ -->
+<div id="screen-interrupcion" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-interr">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Lista
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-interr-pac"></span>
+      <span class="sep">›</span>
+      <span id="breadcrumb-interr-hora"></span>
+      <span class="sep">›</span>
+      <span id="breadcrumb-interr-num">Apnea</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-4">Cerrar sesión</button>
+  </div>
+
+  <!-- Tabs de apneas -->
+  <div style="background:var(--white);border-bottom:1px solid var(--sep);padding-top:8px">
+    <div class="apnea-tabs-row" id="apnea-tabs-row"></div>
+  </div>
+
+  <div class="interr-layout" style="flex:1;overflow:hidden">
+    <!-- Sidebar -->
+    <div class="interr-sidebar">
+      <div class="info-card">
+        <div class="info-card-header">Datos de la apnea</div>
+        <div class="info-card-body" id="info-card-body">
+          <div class="info-row"><span class="key">Hora detectada</span><span class="val" id="inf-hora">--</span></div>
+          <div class="info-row"><span class="key">Duración</span><span class="val" id="inf-dur">--</span></div>
+          <div class="info-row"><span class="key">FC (ECG)</span><span class="val highlight" id="inf-fc">--</span></div>
+          <div class="info-row"><span class="key">SpO₂</span><span class="val" id="inf-spo2">--</span></div>
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-header">Datos del paciente</div>
+        <div class="info-card-body">
+          <div class="info-row"><span class="key">IMC</span><span class="val" id="inf-imc">--</span></div>
+          <div class="info-row"><span class="key">Epworth</span><span class="val" id="inf-epworth">--</span></div>
+          <div class="info-row"><span class="key">Enf. cardiovascular</span><span class="val" id="inf-cardio">--</span></div>
+        </div>
+      </div>
+      <div class="annotation-card">
+        <div class="annotation-card-header">Anotaciones</div>
+        <div class="annotation-card-body">
+          <textarea id="txt-anotacion" placeholder="Escriba una anotación clínica…"></textarea>
+          <button class="btn-save" id="btn-guardar-anot">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Guardar anotación
+          </button>
+          <div class="history-label">Historial (doble clic para cargar):</div>
+          <div class="history-list" id="hist-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main: gráficas -->
+    <div class="interr-main">
+      <div class="charts-col">
+        <div class="chart-wrap">
+          <div class="chart-label">ECG</div>
+          <div class="chart-inner">
+            <canvas id="chart-ecg" class="chart"></canvas>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-label">Flujo Respiratorio</div>
+          <div class="chart-inner">
+            <canvas id="chart-resp" class="chart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="controls-bar">
+        <div class="slider-row">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+          <input type="range" id="slider-nav" min="0" max="100" value="0" style="flex:1"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+          <span class="slider-time" id="slider-time">0.00 s</span>
+        </div>
+        <button class="btn-ctrl" id="btn-pausar" disabled>⏸ Pausar</button>
+        <button class="btn-ctrl" id="btn-reanudar" disabled>▶ Reanudar</button>
+        <div class="nav-arrows">
+          <button class="nav-btn" id="btn-anterior" title="Apnea anterior">‹</button>
+          <button class="nav-btn" id="btn-siguiente" title="Apnea siguiente">›</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+const API = "https://api-biomedica-production.up.railway.app";
+
+/* ─── Estado global ─── */
+let state = {
+  usuario: null,
+  paciente: null,
+  sesionId: null,
+  horas: [],
+  horaIdx: 0,
+  interrupciones: [],
+  interrupcionIdx: 0,
+  historial: {},   // { interrupcionId: [anotaciones] }
+  animando: false,
+  pausado: false,
+  animTimer: null,
+  frameIdx: 0,
+  ecgX: [], ecgY: [], ecgXSeg: [],
+  respX: [], respY: [],
+  ecgFs: 250,
+  ecgYMin: -5, ecgYMax: 5
+};
+
+let chartECG = null, chartResp = null;
+
+/* ─── Pantallas ─── */
+const screens = {
+  login:       document.getElementById('screen-login'),
+  pacientes:   document.getElementById('screen-pacientes'),
+  horas:       document.getElementById('screen-horas'),
+  detalle:     document.getElementById('screen-detalle'),
+  interrupcion:document.getElementById('screen-interrupcion')
+};
+function show(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+/* ─── Toast ─── */
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' ' + type : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ─── API helpers ─── */
+async function api(endpoint, opts={}) {
+  try {
+    const res = await fetch(API + endpoint, { timeout: 10000, ...opts });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch(e) {
+    console.error(endpoint, e);
+    return null;
+  }
+}
+
+/* ─── Señal helpers ─── */
+function limpiarOutliersECG(ts, vs) {
+  if (vs.length < 10) return [ts, vs];
+  const sorted = [...vs].sort((a,b) => a-b);
+  const n = sorted.length;
+  const q1 = sorted[Math.floor(n/4)];
+  const q3 = sorted[Math.floor(3*n/4)];
+  const iqr = q3 - q1;
+  if (iqr === 0) return [ts, vs];
+  const med = sorted[Math.floor(n/2)];
+  const lo = med - 5*iqr, hi = med + 5*iqr;
+  return [ts, vs.map(v => Math.max(lo, Math.min(hi, v)))];
+}
+
+function interpolarUniforme(ts, vs, n) {
+  if (ts.length < 2) return [ts.slice(), vs.slice()];
+  const t0 = ts[0], t1 = ts[ts.length-1];
+  if (t0 === t1) return [ts.slice(), vs.slice()];
+  const paso = (t1-t0)/(n-1);
+  const tsN = Array.from({length:n}, (_,i) => Math.round(t0+i*paso));
+  const vsN = [];
+  let j = 0;
+  for (const t of tsN) {
+    while (j < ts.length-2 && ts[j+1] < t) j++;
+    const ta=ts[j], tb=ts[Math.min(j+1,ts.length-1)];
+    const va=vs[j], vb=vs[Math.min(j+1,vs.length-1)];
+    const frac = tb!==ta ? (t-ta)/(tb-ta) : 0;
+    vsN.push(va + frac*(vb-va));
+  }
+  return [tsN, vsN];
+}
+
+function mediaMovil(vs, ventana) {
+  if (vs.length <= ventana) return vs;
+  return vs.map((_,i) => {
+    const ini = Math.max(0, i - Math.floor(ventana/2));
+    const fin = Math.min(vs.length, i + Math.floor(ventana/2) + 1);
+    const sl = vs.slice(ini, fin);
+    return sl.reduce((a,b)=>a+b,0)/sl.length;
+  });
+}
+
+function construirOndaRespiratoria(tsFlujo, vsFlujo, duracionSeg=20, nPuntos=500) {
+  if (tsFlujo.length > 2) {
+    const [tsU, vsI] = interpolarUniforme(tsFlujo, vsFlujo, nPuntos);
+    const ventana = Math.max(5, Math.floor(vsI.length/12));
+    let vsSuave = mediaMovil(vsI, ventana);
+    vsSuave = mediaMovil(vsSuave, Math.max(3, Math.floor(ventana/2)));
+    const t0 = tsU[0];
+    return [tsU.map(t => (t-t0)/1000.0), vsSuave];
+  }
+  const dur = Math.max(duracionSeg, 1);
+  const ts = Array.from({length:nPuntos}, (_,i) => i*dur/(nPuntos-1));
+  const vs = ts.map(t => 150 + 30*Math.sin(2*Math.PI*0.25*t));
+  return [ts, vs];
+}
+
+function calcularFC(ts, vs) {
+  if (vs.length < 10 || ts.length < 2) return null;
+  const maxV = Math.max(...vs);
+  const umbral = maxV * 0.70;
+  if (umbral <= 0) return null;
+  const durSeg = (ts[ts.length-1] - ts[0]) / 1000.0;
+  if (durSeg <= 0) return null;
+  let picos = 0, enPico = false;
+  for (let i=1; i<vs.length-1; i++) {
+    if (vs[i] > umbral) {
+      if (!enPico && vs[i] >= vs[i-1] && vs[i] >= vs[i+1]) { picos++; enPico=true; }
+    } else { enPico=false; }
+  }
+  if (picos < 2) return null;
+  const fc = Math.round((picos/durSeg)*60);
+  return (fc>=30 && fc<=250) ? fc : null;
+}
+
+function ecgSintetico(x) {
+  const fase = (x % 800)/800;
+  if (fase>0.30 && fase<0.33) return 1.2;
+  if ((fase>0.27&&fase<=0.30)||(fase>=0.33&&fase<0.36)) return -0.15;
+  if (fase>0.36 && fase<0.45) return 0.25 + 0.1*Math.sin(2*Math.PI*(fase-0.36)/0.09);
+  return 0.01*(Math.random()-0.5);
+}
+
+function calcularGravedad(n, epworth, imc, cv) {
+  if (n < 5)  return { texto:'Sin apnea detectada', cls:'sev-none' };
+  if (n <= 14) { let t='AOS Leve'; return { texto:t, cls:'sev-leve' }; }
+  if (n <= 29) return { texto:'AOS Moderado', cls:'sev-moderado' };
+  if (n <= 49) return { texto:'AOS Grave', cls:'sev-grave' };
+  return { texto:'AOS Muy Grave', cls:'sev-muy-grave' };
+}
+
+/* ─── Login ─── */
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+async function doLogin() {
+  const u = document.getElementById('inp-user').value.trim();
+  const p = document.getElementById('inp-pass').value;
+  const errEl = document.getElementById('login-err');
+  const ldEl  = document.getElementById('login-loading');
+  errEl.style.display='none';
+  if (!u||!p) { errEl.textContent='Complete todos los campos.'; errEl.style.display='block'; return; }
+  document.getElementById('btn-login').disabled=true;
+  ldEl.style.display='block';
+  try {
+    const fd = new FormData();
+    fd.append('usuario', u); fd.append('contrasena', p);
+    const res = await fetch(API+'/login', { method:'POST', body:fd, redirect:'manual' });
+    const loc = res.headers.get('location') || '';
+    if ((res.status===302||res.status===200||res.status===0) && (loc.includes('/admin') || res.status===200)) {
+      state.usuario = u;
+      document.getElementById('topbar-username').textContent = u;
+      document.getElementById('topbar-avatar').textContent = u.slice(0,2).toUpperCase();
+      show('pacientes');
+      cargarPacientes();
+    } else {
+      errEl.textContent = 'Usuario o contraseña incorrectos.';
+      errEl.style.display='block';
+    }
+  } catch(e) {
+    errEl.textContent = 'No se pudo conectar con el servidor.';
+    errEl.style.display='block';
+  }
+  document.getElementById('btn-login').disabled=false;
+  ldEl.style.display='none';
+}
+
+/* ─── Logout ─── */
+['btn-logout','btn-logout-2','btn-logout-3','btn-logout-4'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    state = { ...state, usuario:null, paciente:null };
+    document.getElementById('inp-user').value='';
+    document.getElementById('inp-pass').value='';
+    show('login');
+  });
+});
+
+/* ─── Pacientes ─── */
+let debounceTimer = null;
+document.getElementById('inp-buscar').addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(cargarPacientes, 300);
+});
+document.getElementById('btn-refresh').addEventListener('click', cargarPacientes);
+document.getElementById('btn-back-horas').addEventListener('click', () => show('pacientes'));
+
+async function cargarPacientes() {
+  const filtro = document.getElementById('inp-buscar').value.trim();
+  const tbody = document.getElementById('tbl-pacientes-body');
+  tbody.innerHTML = '<tr><td colspan="5"><div class="spinner"></div></td></tr>';
+  let datos = await api('/pacientes');
+  if (!datos) { tbody.innerHTML='<tr><td colspan="5" class="empty-state">Error al cargar pacientes</td></tr>'; return; }
+  if (filtro) datos = datos.filter(p => (p.nombre||'').toLowerCase().includes(filtro.toLowerCase()));
+  if (!datos.length) {
+    tbody.innerHTML='<tr><td colspan="5"><div class="empty-state">No se encontraron pacientes</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = datos.map(p => `
+    <tr data-id="${p.id}" data-pac='${JSON.stringify(p).replace(/'/g,"&#39;")}'>
+      <td><strong>${p.nombre||'--'}</strong></td>
+      <td class="sec">${p.fecha_estudio||'--'}</td>
+      <td class="sec">${p.edad||'--'}</td>
+      <td><span class="badge badge-${(p.sexo||'').toLowerCase()==='f'?'f':'m'}">${p.sexo||'--'}</span></td>
+      <td class="sec">${p.enfermedad_cardiovascular||'--'}</td>
+    </tr>
+  `).join('');
+  tbody.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => abrirPaciente(tr.dataset.id, JSON.parse(tr.dataset.pac.replace(/&#39;/g,"'"))));
+  });
+}
+
+async function abrirPaciente(id, pac) {
+  state.paciente = pac;
+  document.getElementById('breadcrumb-paciente').textContent = pac.nombre;
+  document.getElementById('breadcrumb-paciente-2').textContent = pac.nombre;
+  document.getElementById('breadcrumb-interr-pac').textContent = pac.nombre;
+  document.getElementById('horas-title').textContent = pac.nombre;
+
+  show('horas');
+  document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
+  document.getElementById('summary-bar').innerHTML = '';
+
+  // Obtener sesión
+  let sesId = null;
+  const res1 = await api(`/sesion/por-paciente/${id}`);
+  if (res1?.sesion_id) sesId = res1.sesion_id;
+  if (!sesId) {
+    const nombre = encodeURIComponent(pac.nombre);
+    const res2 = await api(`/sesion/por-nombre/${nombre}`);
+    if (res2?.sesion_id) sesId = res2.sesion_id;
+  }
+  state.sesionId = sesId;
+
+  if (!sesId) {
+    document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesión registrada para este paciente</div>';
+    return;
+  }
+  cargarHoras(sesId);
+}
+
+async function cargarHoras(sesId) {
+  let horas = await api(`/horas-sesion/${sesId}`);
+  if (!horas) { document.getElementById('horas-grid').innerHTML='<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Error al cargar horas</div>'; return; }
+
+  // Normalizar
+  horas = horas.map((h,i) => {
+    h = {...h};
+    let n = h.numero_hora;
+    if (n!==null && n>23) { n=(Math.floor(n/3600))%24; h.numero_hora=n; h.hora_inicio=`${String(n).padStart(2,'0')}:00:00`; h.hora_fin=`${String((n+1)%24).padStart(2,'0')}:00:00`; }
+    if (!('hora_orden' in h)) h.hora_orden = i+1;
+    return h;
+  });
+  state.horas = horas;
+
+  // Summary bar
+  const totalApneas = horas.reduce((s,h)=>s+h.total_interrupciones,0);
+  const horaMax = horas.reduce((a,b)=>b.total_interrupciones>a.total_interrupciones?b:a,horas[0]);
+  const iah = totalApneas;
+  let riesgoTxt='Normal', riesgoCls='';
+  if (iah>=5 && iah<=14) riesgoTxt='Leve';
+  else if (iah>=15 && iah<=29) riesgoTxt='Moderado';
+  else if (iah>=30 && iah<=49) riesgoTxt='Grave';
+  else if (iah>=50) riesgoTxt='Muy Grave';
+
+  document.getElementById('summary-bar').innerHTML = `
+    <div class="summary-card"><div class="label">Horas registradas</div><div class="value">${horas.length}</div><div class="sub">horas de sueño</div></div>
+    <div class="summary-card"><div class="label">Total apneas</div><div class="value" style="color:var(--accent)">${totalApneas}</div><div class="sub">interrupciones detectadas</div></div>
+    <div class="summary-card"><div class="label">IAH estimado</div><div class="value">${iah}</div><div class="sub">eventos/hora</div></div>
+    <div class="summary-card"><div class="label">Severidad global</div><div class="value" style="font-size:18px;margin-top:6px">${riesgoTxt}</div><div class="sub">clasificación AOS</div></div>
+  `;
+
+  // Tarjetas
+  const pac = state.paciente;
+  document.getElementById('horas-grid').innerHTML = horas.map((h,i) => {
+    const hi = (h.hora_inicio||'--').slice(0,5);
+    const hf = (h.hora_fin||'--').slice(0,5);
+    const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+    const suf = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª'];
+    return `
+      <div class="hora-card" data-hidx="${i}" data-hid="${h.id}">
+        <div class="hora-card-num">${suf[i]||`${i+1}ª`} Hora</div>
+        <div class="hora-card-time">${hi}</div>
+        <div class="hora-card-range">${hi} — ${hf}</div>
+        <div class="hora-card-count">${h.total_interrupciones}</div>
+        <div class="hora-card-count-lbl">interrupciones</div>
+        <span class="severity-chip ${g.cls}">● ${g.texto}</span>
+      </div>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.hora-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.hidx);
+      const hid = parseInt(card.dataset.hid);
+      abrirDetalleHora(idx, hid);
+    });
+  });
+}
+
+/* ─── Detalle Hora ─── */
+document.getElementById('btn-back-detalle').addEventListener('click', () => show('horas'));
+
+async function abrirDetalleHora(horaIdx, horaId) {
+  state.horaIdx = horaIdx;
+  show('detalle');
+  const suf = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª'];
+  document.getElementById('breadcrumb-hora').textContent = (suf[horaIdx]||`${horaIdx+1}ª`) + ' Hora';
+  document.getElementById('breadcrumb-interr-hora').textContent = (suf[horaIdx]||`${horaIdx+1}ª`) + ' Hora';
+
+  // Tabs de horas
+  const tabsRow = document.getElementById('hour-tabs-row');
+  tabsRow.innerHTML = state.horas.map((h,i) => {
+    const hi = (h.hora_inicio||'--').slice(0,5);
+    const hf = (h.hora_fin||'--').slice(0,5);
+    const suf2 = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª'];
+    return `
+      <div class="hour-tab ${i===horaIdx?'active':''}" data-hidx="${i}" data-hid="${h.id}">
+        <div class="hour-tab-label">${suf2[i]||`${i+1}ª`} Hora</div>
+        <div class="hour-tab-range">${hi}–${hf}</div>
+        <div class="hour-tab-count">⚡ ${h.total_interrupciones} interr.</div>
+      </div>
+    `;
+  }).join('');
+
+  tabsRow.querySelectorAll('.hour-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const idx = parseInt(tab.dataset.hidx);
+      const hid = parseInt(tab.dataset.hid);
+      abrirDetalleHora(idx, hid);
+    });
+  });
+
+  // Tabla de interrupciones
+  const wrap = document.getElementById('interr-table-wrap');
+  wrap.innerHTML = '<div class="spinner"></div>';
+
+  const datos = await api(`/interrupciones/${horaId}`);
+  if (!datos) { wrap.innerHTML='<p style="padding:20px;color:var(--txt-sec)">Error al cargar interrupciones</p>'; return; }
+
+  // Agregar numero_consecutivo si falta
+  datos.forEach((d,i) => { if(!('numero_consecutivo' in d)) d.numero_consecutivo = d.numero_interrupcion||i+1; });
+  state.interrupciones = datos;
+
+  if (!datos.length) {
+    wrap.innerHTML='<div style="padding:40px;text-align:center;color:var(--txt-sec)">No hay interrupciones en esta hora</div>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>N° Apnea</th>
+              <th>Hora detectada</th>
+              <th>Duración (s)</th>
+              <th>SpO₂ %</th>
+              <th>FC (lpm)</th>
+            </tr>
+          </thead>
+          <tbody id="tbl-interr-body">
+            ${datos.map((d,i) => `
+              <tr data-idx="${i}">
+                <td><strong>#${d.numero_consecutivo}</strong></td>
+                <td class="sec">${(d.hora_detectada||'--').slice(0,5)}</td>
+                <td>${d.duracion_segundos} s</td>
+                <td>${d.spo2}%</td>
+                <td>${d.frecuencia_cardiaca} lpm</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('#tbl-interr-body tr').forEach(tr => {
+    tr.addEventListener('dblclick', () => abrirInterrupcion(parseInt(tr.dataset.idx)));
+    tr.addEventListener('click', () => {
+      document.querySelectorAll('#tbl-interr-body tr').forEach(r=>r.style.background='');
+      tr.style.background='var(--accent-xl)';
+    });
+  });
+}
+
+/* ─── Interrupción ─── */
+document.getElementById('btn-back-interr').addEventListener('click', () => {
+  detenerAnimacion();
+  show('detalle');
+});
+document.getElementById('btn-anterior').addEventListener('click', () => {
+  if (state.interrupcionIdx > 0) { state.interrupcionIdx--; actualizarInterrupcion(); }
+});
+document.getElementById('btn-siguiente').addEventListener('click', () => {
+  if (state.interrupcionIdx < state.interrupciones.length-1) { state.interrupcionIdx++; actualizarInterrupcion(); }
+});
+document.getElementById('btn-pausar').addEventListener('click', pausarAnimacion);
+document.getElementById('btn-reanudar').addEventListener('click', reanudarAnimacion);
+document.getElementById('btn-guardar-anot').addEventListener('click', guardarAnotacion);
+document.getElementById('slider-nav').addEventListener('input', onSliderInput);
+
+function abrirInterrupcion(idx) {
+  state.interrupcionIdx = idx;
+  inicializarCharts();
+  show('interrupcion');
+  actualizarInterrupcion();
+}
+
+function actualizarInterrupcion() {
+  const datos = state.interrupciones;
+  if (!datos.length) return;
+  const d = datos[state.interrupcionIdx];
+  const pac = state.paciente;
+  const num = d.numero_consecutivo || d.numero_interrupcion || state.interrupcionIdx+1;
+  const suf = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª'];
+
+  document.getElementById('breadcrumb-interr-num').textContent = `Apnea #${num}`;
+  document.getElementById('inf-hora').textContent = (d.hora_detectada||'--').slice(0,5);
+  document.getElementById('inf-dur').textContent = `${d.duracion_segundos} seg`;
+  document.getElementById('inf-fc').textContent = 'Calculando…';
+  document.getElementById('inf-spo2').textContent = `${d.spo2}%`;
+  document.getElementById('inf-imc').textContent = pac.imc || '--';
+  document.getElementById('inf-epworth').textContent = pac.epworth || '--';
+  document.getElementById('inf-cardio').textContent = pac.enfermedad_cardiovascular || '--';
+
+  // Anotacion
+  const anot = d.anotacion || '';
+  document.getElementById('txt-anotacion').value = anot;
+  actualizarHistorial(d.id, anot);
+
+  // Tabs apnea
+  const tabsRow = document.getElementById('apnea-tabs-row');
+  tabsRow.innerHTML = datos.map((dd,i) => {
+    const n2 = dd.numero_consecutivo || dd.numero_interrupcion || i+1;
+    return `
+      <div class="apnea-tab ${i===state.interrupcionIdx?'active':''}" data-idx="${i}">
+        Apnea #${n2}
+        <span class="tab-time">${(dd.hora_detectada||'--').slice(0,5)}</span>
+      </div>
+    `;
+  }).join('');
+  tabsRow.querySelectorAll('.apnea-tab').forEach(tab => {
+    tab.addEventListener('click', () => { state.interrupcionIdx=parseInt(tab.dataset.idx); actualizarInterrupcion(); });
+  });
+
+  // Nav buttons
+  document.getElementById('btn-anterior').disabled = state.interrupcionIdx===0;
+  document.getElementById('btn-siguiente').disabled = state.interrupcionIdx===datos.length-1;
+
+  cargarGraficas(d.id, d.duracion_segundos);
+}
+
+function actualizarHistorial(interrId, anotActual) {
+  if (!state.historial[interrId]) state.historial[interrId] = [];
+  if (anotActual && !state.historial[interrId].includes(anotActual)) {
+    state.historial[interrId].unshift(anotActual);
+  }
+  const el = document.getElementById('hist-list');
+  el.innerHTML = state.historial[interrId].map((a,i) => {
+    const preview = a.replace(/\n/g,' ').trim().slice(0,60) + (a.length>60?'…':'');
+    return `<div class="history-item" data-idx="${i}">#${i+1} ${preview}</div>`;
+  }).join('') || '<div class="history-item" style="color:var(--sep)">Sin historial</div>';
+  el.querySelectorAll('.history-item[data-idx]').forEach(item => {
+    item.addEventListener('dblclick', () => {
+      const idx = parseInt(item.dataset.idx);
+      document.getElementById('txt-anotacion').value = state.historial[interrId][idx];
+    });
+  });
+}
+
+async function guardarAnotacion() {
+  const d = state.interrupciones[state.interrupcionIdx];
+  const texto = document.getElementById('txt-anotacion').value.trim();
+  const btn = document.getElementById('btn-guardar-anot');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/interrupciones/${d.id}/anotacion`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({anotacion: texto})
+    });
+    if (res.ok) {
+      d.anotacion = texto;
+      actualizarHistorial(d.id, texto);
+      toast('Anotación guardada', 'ok');
+    } else {
+      toast('Error al guardar', 'err');
+    }
+  } catch(e) { toast('Error de conexión', 'err'); }
+  btn.disabled = false;
+}
+
+/* ─── Gráficas ─── */
+function inicializarCharts() {
+  if (chartECG) { chartECG.destroy(); chartECG=null; }
+  if (chartResp) { chartResp.destroy(); chartResp=null; }
+
+  const cfgBase = (label, borderColor, gridColor) => ({
+    type:'line',
+    data:{ datasets:[{ label, data:[], borderColor, borderWidth:1.5, pointRadius:0, tension:0 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      interaction:{ mode:'index', intersect:false },
+      scales:{
+        x:{ type:'linear', title:{display:true,text:'Tiempo (s)',font:{size:10},color:'#5A7A8A'},
+            grid:{ color: gridColor }, ticks:{color:'#5A7A8A',font:{size:9},maxTicksLimit:8} },
+        y:{ grid:{ color:'#F0F0F0' }, ticks:{color:'#5A7A8A',font:{size:9}} }
+      },
+      plugins:{ legend:{display:false} }
+    }
+  });
+
+  // ECG grid rojo-tenue (estilo papel ECG)
+  chartECG = new Chart(document.getElementById('chart-ecg'), cfgBase('ECG','#2A6496','#F8D7D7'));
+  chartECG.options.scales.x.grid.color = (ctx) => ctx.index%5===0?'#F5A0A0':'#FAD4D4';
+
+  chartResp = new Chart(document.getElementById('chart-resp'), cfgBase('Flujo','#27AE60','#CCDDEE'));
+}
+
+async function cargarGraficas(interrId, duracionSeg) {
+  detenerAnimacion();
+  document.getElementById('slider-nav').value = 0;
+  document.getElementById('slider-time').textContent = '0.00 s';
+
+  const [senalesECG, senalesFlujo] = await Promise.all([
+    api(`/senales/${interrId}/ECG`),
+    api(`/senales/${interrId}/flujo`)
+  ]);
+
+  // ECG
+  let ecgX, ecgY;
+  if (senalesECG && senalesECG.length) {
+    let rawX = senalesECG.map(r=>r.timestamp_ms);
+    let rawY = senalesECG.map(r=>parseFloat(r.valor));
+    [ecgX, ecgY] = limpiarOutliersECG(rawX, rawY);
+  } else {
+    ecgX = Array.from({length:1250}, (_,i)=>i*4);
+    ecgY = ecgX.map(x=>ecgSintetico(x));
+  }
+  const t0ecg = ecgX[0];
+  const ecgXSeg = ecgX.map(t=>(t-t0ecg)/1000.0);
+
+  if (ecgX.length > 1) {
+    const durMs = ecgX[ecgX.length-1]-ecgX[0];
+    if (durMs>0) state.ecgFs = ecgX.length/(durMs/1000.0);
+  }
+
+  const ecgYMax = Math.max(...ecgY);
+  const ecgYMin = Math.min(...ecgY);
+  state.ecgYMax = ecgYMax + Math.abs(ecgYMax)*0.1 + 1;
+  state.ecgYMin = ecgYMin - Math.abs(ecgYMin)*0.1 - 1;
+
+  state.ecgX = ecgX; state.ecgY = ecgY; state.ecgXSeg = ecgXSeg;
+
+  // FC
+  const fc = calcularFC(ecgX, ecgY);
+  const fcEl = document.getElementById('inf-fc');
+  if (fc) { fcEl.textContent = `❤ ${fc} lpm`; fcEl.className='val highlight'; }
+  else if (!senalesECG||!senalesECG.length) { fcEl.textContent='Simulado'; fcEl.className='val sec'; }
+  else { fcEl.textContent='Insuf. datos'; fcEl.className='val sec'; }
+
+  // Resp
+  let respX, respY;
+  const tsFlujo = (senalesFlujo||[]).map(r=>r.timestamp_ms);
+  const vsFlujo = (senalesFlujo||[]).map(r=>parseFloat(r.valor));
+  if (tsFlujo.length>2) {
+    [respX, respY] = construirOndaRespiratoria(tsFlujo, vsFlujo, duracionSeg, 500);
+  } else {
+    const dur = Math.max(duracionSeg||5, 5);
+    respX = Array.from({length:500}, (_,i)=>i*dur/499);
+    respY = respX.map(t=>150+30*Math.sin(2*Math.PI*0.25*t));
+  }
+  state.respX = respX; state.respY = respY;
+
+  // Configurar ejes
+  chartECG.options.scales.y.min = state.ecgYMin;
+  chartECG.options.scales.y.max = state.ecgYMax;
+
+  // Animar
+  animarSenales();
+}
+
+/* ─── Animación ─── */
+function animarSenales() {
+  detenerAnimacion();
+  state.animando = true; state.pausado = false; state.frameIdx = 0;
+  document.getElementById('btn-pausar').disabled = false;
+  document.getElementById('btn-reanudar').disabled = true;
+  document.getElementById('slider-nav').disabled = true;
+
+  const VENTANA_SEG = 10.0;
+  const DELAY_MS = 20;
+  const PASO = Math.max(1, Math.round(state.ecgFs * DELAY_MS / 1000.0));
+  const totalPuntos = state.ecgXSeg.length;
+  const totalSeg = state.ecgXSeg.length ? state.ecgXSeg[state.ecgXSeg.length-1] : 1.0;
+  const ptsPorVentana = Math.max(50, Math.round(totalPuntos * VENTANA_SEG / Math.max(totalSeg,1)));
+
+  function step() {
+    if (!state.animando) return;
+    const idx = state.frameIdx;
+    const finE = Math.min(idx+PASO, totalPuntos);
+    const iniE = Math.max(0, finE-ptsPorVentana);
+    const xsE = state.ecgXSeg.slice(iniE, finE);
+    const ysE = state.ecgY.slice(iniE, finE);
+
+    // Resp sincronizada
+    let xsR=[], ysR=[];
+    if (xsE.length) {
+      const tActual = xsE[xsE.length-1];
+      const totalResp = state.respX.length ? state.respX[state.respX.length-1] : totalSeg;
+      const fracT = tActual / Math.max(totalSeg, 0.001);
+      const idxRFin = Math.min(Math.round(fracT*state.respX.length), state.respX.length);
+      const fracV = VENTANA_SEG / Math.max(totalResp, 1);
+      const idxRIni = Math.max(0, idxRFin - Math.round(fracV*state.respX.length));
+      xsR = state.respX.slice(idxRIni, idxRFin);
+      ysR = state.respY.slice(idxRIni, idxRFin);
+    }
+
+    // Actualizar Chart.js
+    if (xsE.length) {
+      chartECG.data.datasets[0].data = xsE.map((x,i) => ({x,y:ysE[i]}));
+      const xFin = xsE[xsE.length-1];
+      chartECG.options.scales.x.min = xFin - VENTANA_SEG;
+      chartECG.options.scales.x.max = xFin;
+    }
+    if (xsR.length) {
+      chartResp.data.datasets[0].data = xsR.map((x,i) => ({x,y:ysR[i]}));
+      const xFinR = xsR[xsR.length-1];
+      chartResp.options.scales.x.min = xFinR - VENTANA_SEG;
+      chartResp.options.scales.x.max = xFinR;
+      const rMin = Math.min(...ysR), rMax = Math.max(...ysR);
+      const margen = Math.max((rMax-rMin)*0.1, 2);
+      chartResp.options.scales.y.min = rMin-margen;
+      chartResp.options.scales.y.max = rMax+margen;
+    }
+    chartECG.update('none');
+    chartResp.update('none');
+
+    // Slider
+    if (totalPuntos>0) {
+      const pct = Math.min(Math.round(state.frameIdx/totalPuntos*100), 100);
+      document.getElementById('slider-nav').value = pct;
+      if (xsE.length) document.getElementById('slider-time').textContent = xsE[xsE.length-1].toFixed(2)+' s';
+    }
+
+    state.frameIdx += PASO;
+    if (state.frameIdx < totalPuntos + ptsPorVentana) {
+      state.animTimer = setTimeout(step, DELAY_MS);
+    } else {
+      state.animando = false; state.pausado = false;
+      document.getElementById('btn-pausar').disabled = true;
+      document.getElementById('btn-reanudar').disabled = true;
+      document.getElementById('slider-nav').disabled = false;
+      document.getElementById('slider-nav').value = 0;
+      dibujarCompleto();
+    }
+  }
+  state.animTimer = setTimeout(step, DELAY_MS);
+}
+
+function detenerAnimacion() {
+  state.animando = false; state.pausado = false;
+  if (state.animTimer) { clearTimeout(state.animTimer); state.animTimer=null; }
+  document.getElementById('btn-pausar').disabled = true;
+  document.getElementById('btn-reanudar').disabled = true;
+  document.getElementById('slider-nav').disabled = false;
+}
+
+function pausarAnimacion() {
+  if (!state.animando || state.pausado) return;
+  state.pausado = true; state.animando = false;
+  if (state.animTimer) { clearTimeout(state.animTimer); state.animTimer=null; }
+  document.getElementById('btn-pausar').disabled = true;
+  document.getElementById('btn-reanudar').disabled = false;
+}
+
+function reanudarAnimacion() {
+  if (!state.pausado) return;
+  state.pausado = false; state.animando = true;
+  document.getElementById('btn-pausar').disabled = false;
+  document.getElementById('btn-reanudar').disabled = true;
+  const VENTANA_SEG=10, DELAY_MS=20;
+  const PASO=Math.max(1,Math.round(state.ecgFs*DELAY_MS/1000));
+  const totalPuntos=state.ecgXSeg.length, totalSeg=state.ecgXSeg.length?state.ecgXSeg[state.ecgXSeg.length-1]:1;
+  const ptsPorVentana=Math.max(50,Math.round(totalPuntos*VENTANA_SEG/Math.max(totalSeg,1)));
+  function step() {
+    if (!state.animando) return;
+    const idx=state.frameIdx;
+    const finE=Math.min(idx+PASO,totalPuntos);
+    const iniE=Math.max(0,finE-ptsPorVentana);
+    const xsE=state.ecgXSeg.slice(iniE,finE);
+    const ysE=state.ecgY.slice(iniE,finE);
+    if (xsE.length){
+      chartECG.data.datasets[0].data=xsE.map((x,i)=>({x,y:ysE[i]}));
+      const xFin=xsE[xsE.length-1];
+      chartECG.options.scales.x.min=xFin-VENTANA_SEG;
+      chartECG.options.scales.x.max=xFin;
+    }
+    chartECG.update('none'); chartResp.update('none');
+    const pct=Math.min(Math.round(state.frameIdx/totalPuntos*100),100);
+    document.getElementById('slider-nav').value=pct;
+    if (xsE.length) document.getElementById('slider-time').textContent=xsE[xsE.length-1].toFixed(2)+' s';
+    state.frameIdx+=PASO;
+    if (state.frameIdx<totalPuntos+ptsPorVentana) { state.animTimer=setTimeout(step,DELAY_MS); }
+    else { state.animando=false; document.getElementById('btn-pausar').disabled=true; document.getElementById('btn-reanudar').disabled=true; document.getElementById('slider-nav').disabled=false; dibujarCompleto(); }
+  }
+  step();
+}
+
+function onSliderInput(e) {
+  if (state.animando) return;
+  const pct = parseInt(e.target.value)/100;
+  const totalSeg = state.ecgXSeg.length ? state.ecgXSeg[state.ecgXSeg.length-1] : 1;
+  const VENTANA_SEG = 10;
+  const tInicio = Math.max(0, (totalSeg - VENTANA_SEG) * pct);
+  dibujarVentanaEn(tInicio);
+  document.getElementById('slider-time').textContent = tInicio.toFixed(2)+' s';
+}
+
+function dibujarCompleto() {
+  if (!state.ecgXSeg.length) return;
+  const VENTANA_SEG = 10;
+  const totalSeg = state.ecgXSeg[state.ecgXSeg.length-1];
+  dibujarVentanaEn(Math.max(0, totalSeg-VENTANA_SEG));
+}
+
+function dibujarVentanaEn(tInicio) {
+  const VENTANA_SEG = 10;
+  const tFin = tInicio + VENTANA_SEG;
+  const xsE = [], ysE = [];
+  for (let i=0;i<state.ecgXSeg.length;i++) {
+    const t=state.ecgXSeg[i];
+    if (t>=tInicio && t<=tFin) { xsE.push(t); ysE.push(state.ecgY[i]); }
+  }
+  chartECG.data.datasets[0].data = xsE.map((x,i)=>({x,y:ysE[i]}));
+  chartECG.options.scales.x.min = tInicio;
+  chartECG.options.scales.x.max = tFin;
+  chartECG.update('none');
+
+  const VENTANA_RESP = 10;
+  const totalResp = state.respX.length ? state.respX[state.respX.length-1] : 1;
+  const fracIni = tInicio/Math.max(state.ecgXSeg[state.ecgXSeg.length-1],1);
+  const rIni = state.respX.findIndex(t=>t>=fracIni*totalResp);
+  const rFin = state.respX.findIndex(t=>t>=(fracIni*totalResp+VENTANA_RESP));
+  const xsR = state.respX.slice(rIni>=0?rIni:0, rFin>=0?rFin:state.respX.length);
+  const ysR = state.respY.slice(rIni>=0?rIni:0, rFin>=0?rFin:state.respY.length);
+  if (xsR.length){
+    chartResp.data.datasets[0].data=xsR.map((x,i)=>({x,y:ysR[i]}));
+    chartResp.options.scales.x.min=xsR[0];
+    chartResp.options.scales.x.max=xsR[xsR.length-1];
+    const rMin=Math.min(...ysR),rMax=Math.max(...ysR);
+    const margen=Math.max((rMax-rMin)*0.1,2);
+    chartResp.options.scales.y.min=rMin-margen;
+    chartResp.options.scales.y.max=rMax+margen;
+  }
+  chartResp.update('none');
+}
+
+/* ─── Enter en búsqueda ─── */
+document.getElementById('inp-buscar').addEventListener('keydown', e => { if(e.key==='Enter') cargarPacientes(); });
+</script>
+</body>
+</html>
