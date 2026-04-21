@@ -566,9 +566,15 @@ tbody td.sec{color:var(--txt-sec)}
     <button class="btn-logout" id="btn-logout-2">Cerrar sesión</button>
   </div>
   <div class="page-content">
-    <div class="page-header">
-      <h1 id="horas-title">Sesión de sueño</h1>
-      <p>Resumen por hora — haga clic en una tarjeta para ver las interrupciones detectadas</p>
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div>
+        <h1 id="horas-title">Sesión de sueño</h1>
+        <p>Resumen por hora — haga clic en una tarjeta para ver las interrupciones detectadas</p>
+      </div>
+      <button class="btn-ctrl" id="btn-pdf-horas" style="background:#1E4D72;gap:6px;flex-shrink:0;margin-top:4px;padding:9px 16px;font-size:13px" title="Generar PDF completo del monitoreo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Generar PDF del monitoreo
+      </button>
     </div>
     <div class="summary-bar" id="summary-bar"></div>
     <div class="horas-grid" id="horas-grid">
@@ -979,19 +985,31 @@ async function cargarHoras(sesId) {
 
   // Summary bar
   const totalApneas = horas.reduce((s,h)=>s+h.total_interrupciones,0);
-  const horaMax = horas.reduce((a,b)=>b.total_interrupciones>a.total_interrupciones?b:a,horas[0]);
-  const iah = totalApneas;
-  let riesgoTxt='Normal', riesgoCls='';
-  if (iah>=5 && iah<=14) riesgoTxt='Leve';
-  else if (iah>=15 && iah<=29) riesgoTxt='Moderado';
-  else if (iah>=30 && iah<=49) riesgoTxt='Grave';
-  else if (iah>=50) riesgoTxt='Muy Grave';
+  const iah = horas.length ? Math.round(totalApneas / horas.length) : 0;
+
+  // Severidad: clasificar cada hora individualmente y tomar la más frecuente
+  const sevConteo = { 'Sin apnea':0, 'AOS Leve':0, 'AOS Moderado':0, 'AOS Grave':0, 'AOS Muy Grave':0 };
+  const pac = state.paciente;
+  horas.forEach(h => {
+    const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+    const key = g.texto === 'Sin apnea detectada' ? 'Sin apnea' : g.texto;
+    if (key in sevConteo) sevConteo[key]++;
+  });
+  // Excluir "Sin apnea" si hay horas con apnea
+  const horasConApnea = horas.filter(h => h.total_interrupciones >= 5);
+  let riesgoTxt = 'Sin apnea detectada';
+  let riesgoSub = 'tipo predominante en la noche';
+  if (horasConApnea.length > 0) {
+    const sevSoloApnea = { 'AOS Leve': sevConteo['AOS Leve'], 'AOS Moderado': sevConteo['AOS Moderado'], 'AOS Grave': sevConteo['AOS Grave'], 'AOS Muy Grave': sevConteo['AOS Muy Grave'] };
+    riesgoTxt = Object.entries(sevSoloApnea).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+    riesgoSub = `tipo más frecuente (${horasConApnea.length} hora${horasConApnea.length>1?'s':''} con apnea)`;
+  }
 
   document.getElementById('summary-bar').innerHTML = `
     <div class="summary-card"><div class="label">Horas registradas</div><div class="value">${horas.length}</div><div class="sub">horas de sueño</div></div>
     <div class="summary-card"><div class="label">Total apneas</div><div class="value" style="color:var(--accent)">${totalApneas}</div><div class="sub">interrupciones detectadas</div></div>
     <div class="summary-card"><div class="label">IAH estimado</div><div class="value">${iah}</div><div class="sub">eventos/hora</div></div>
-    <div class="summary-card"><div class="label">Severidad global</div><div class="value" style="font-size:18px;margin-top:6px">${riesgoTxt}</div><div class="sub">clasificación AOS</div></div>
+    <div class="summary-card"><div class="label">Tipo predominante</div><div class="value" style="font-size:${riesgoTxt.length>12?'14px':'18px'};margin-top:6px">${riesgoTxt}</div><div class="sub">${riesgoSub}</div></div>
   `;
 
   // Tarjetas
@@ -1081,7 +1099,7 @@ async function abrirDetalleHora(horaIdx, horaId) {
               <th>Hora detectada</th>
               <th>Duración (s)</th>
               <th>SpO₂ %</th>
-              <th>FC (lpm)</th>
+              <th>FC (ECG)</th>
             </tr>
           </thead>
           <tbody id="tbl-interr-body">
@@ -1091,7 +1109,7 @@ async function abrirDetalleHora(horaIdx, horaId) {
                 <td class="sec">${(d.hora_detectada||'--').slice(0,5)}</td>
                 <td>${d.duracion_segundos} s</td>
                 <td>${d.spo2}%</td>
-                <td>${d.frecuencia_cardiaca} lpm</td>
+                <td id="fc-row-${d.id}" style="color:var(--txt-sec);font-size:12px">…</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1099,6 +1117,41 @@ async function abrirDetalleHora(horaIdx, horaId) {
       </div>
     </div>
   `;
+
+  // Calcular FC desde ECG para cada apnea en background
+  datos.forEach(async (d) => {
+    const el = document.getElementById(`fc-row-${d.id}`);
+    if (!el) return;
+    try {
+      const senalesECG = await api(`/senales/${d.id}/ECG`);
+      if (senalesECG && senalesECG.length) {
+        let rawX = senalesECG.map(r=>r.timestamp_ms);
+        let rawY = senalesECG.map(r=>parseFloat(r.valor));
+        const [cX, cY] = limpiarOutliersECG(rawX, rawY);
+        const fc = calcularFC(cX, cY);
+        if (fc) {
+          el.textContent = `❤ ${fc} lpm`;
+          el.style.color = 'var(--ok)';
+          el.style.fontWeight = '600';
+          el.style.fontSize = '';
+          // cache para el PDF
+          d._fcCalculada = fc;
+        } else {
+          el.textContent = `${d.frecuencia_cardiaca} lpm`;
+          el.style.color = '';
+          el.style.fontSize = '';
+          d._fcCalculada = null;
+        }
+      } else {
+        el.textContent = `${d.frecuencia_cardiaca} lpm`;
+        el.style.color = '';
+        el.style.fontSize = '';
+        d._fcCalculada = null;
+      }
+    } catch(e) {
+      if (el) { el.textContent = `${d.frecuencia_cardiaca} lpm`; el.style.color=''; el.style.fontSize=''; }
+    }
+  });
 
   document.querySelectorAll('#tbl-interr-body tr').forEach(tr => {
     tr.addEventListener('dblclick', () => abrirInterrupcion(parseInt(tr.dataset.idx)));
@@ -1494,8 +1547,210 @@ function dibujarVentanaEn(tInicio) {
 /* ─── Enter en búsqueda ─── */
 document.getElementById('inp-buscar').addEventListener('keydown', e => { if(e.key==='Enter') cargarPacientes(); });
 
-/* ─── PDF Button ─── */
+/* ─── PDF Button (apnea detail) ─── */
 document.getElementById('btn-pdf').addEventListener('click', generarPDF);
+
+/* ─── PDF Button (sesión completa desde pantalla horas) ─── */
+document.getElementById('btn-pdf-horas').addEventListener('click', generarPDFSesion);
+
+async function generarPDFSesion() {
+  const { jsPDF } = window.jspdf;
+  const btn = document.getElementById('btn-pdf-horas');
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  toast('Generando PDF del monitoreo completo…');
+
+  const pac   = state.paciente;
+  const horas = state.horas;
+
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const PW = 210, PH = 297;
+  const ML = 14, MR = 14, MT = 14;
+  let y = MT;
+
+  const C_ACCENT = [42, 100, 150];
+  const C_SEC    = [90, 122, 138];
+  const C_PRI    = [26, 46, 59];
+  const C_SEP    = [224, 235, 242];
+  const C_BG     = [247, 250, 252];
+  const C_OK     = [39, 174, 96];
+
+  function hLine(yy, color=C_SEP) {
+    doc.setDrawColor(...color); doc.setLineWidth(0.3);
+    doc.line(ML, yy, PW-MR, yy);
+  }
+  function txt(s, x, yy, sz, color, bold=false) {
+    doc.setFont('helvetica', bold?'bold':'normal');
+    doc.setFontSize(sz); doc.setTextColor(...color);
+    doc.text(String(s), x, yy);
+  }
+  function fillRect(x, yy, w, h, color) {
+    doc.setFillColor(...color); doc.rect(x, yy, w, h, 'F');
+  }
+  function strokeRect(x, yy, w, h, color, lw=0.3) {
+    doc.setDrawColor(...color); doc.setLineWidth(lw); doc.rect(x, yy, w, h, 'S');
+  }
+  function checkPage(needed=20) {
+    if (y + needed > PH - 16) { doc.addPage(); y = MT; }
+  }
+
+  // ── CABECERA ──
+  fillRect(ML, y, PW-ML-MR, 20, C_ACCENT);
+  txt('AOS Monitor', ML+4, y+8, 15, [255,255,255], true);
+  txt('Reporte completo de monitoreo nocturno', ML+4, y+14, 8, [180,210,230]);
+  const fechaGen = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(180,210,230);
+  doc.text(`Generado: ${fechaGen}`, PW-MR-4, y+14, {align:'right'});
+  y += 25;
+
+  // ── DATOS DEL PACIENTE ──
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt('DATOS DEL PACIENTE', ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 8;
+  const fields = [
+    ['Nombre', pac.nombre||'--'], ['Edad', pac.edad||'--'],
+    ['Sexo', pac.sexo||'--'], ['Fecha de estudio', pac.fecha_estudio||'--'],
+    ['IMC', pac.imc||'--'], ['Epworth', pac.epworth||'--'],
+    ['Enf. cardiovascular', pac.enfermedad_cardiovascular||'--']
+  ];
+  const cw2 = (PW-ML-MR)/2;
+  for (let i=0; i<fields.length; i+=2) {
+    fillRect(ML, y, PW-ML-MR, 6, i%4===0?[255,255,255]:C_BG);
+    txt(fields[i][0]+': ', ML+2, y+4.2, 7.5, C_SEC);
+    txt(String(fields[i][1]), ML+2+doc.getTextWidth(fields[i][0]+': '), y+4.2, 7.5, C_PRI, true);
+    if (fields[i+1]) {
+      txt(fields[i+1][0]+': ', ML+cw2+2, y+4.2, 7.5, C_SEC);
+      txt(String(fields[i+1][1]), ML+cw2+2+doc.getTextWidth(fields[i+1][0]+': '), y+4.2, 7.5, C_PRI, true);
+    }
+    hLine(y+6); y += 6;
+  }
+  y += 6;
+
+  // ── RESUMEN GENERAL ──
+  checkPage(22);
+  const totalApneas = horas.reduce((s,h)=>s+h.total_interrupciones,0);
+  const iah = horas.length ? Math.round(totalApneas/horas.length) : 0;
+
+  // Severidad predominante por horas
+  const sevConteo = {'AOS Leve':0,'AOS Moderado':0,'AOS Grave':0,'AOS Muy Grave':0};
+  horas.forEach(h => {
+    const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+    if (g.texto in sevConteo) sevConteo[g.texto]++;
+  });
+  const horasConApnea = horas.filter(h=>h.total_interrupciones>=5);
+  let sevPredominante = 'Sin apnea detectada';
+  if (horasConApnea.length>0) {
+    sevPredominante = Object.entries(sevConteo).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+  }
+
+  const resCards = [
+    ['Horas registradas', horas.length],
+    ['Total apneas', totalApneas],
+    ['IAH estimado', iah+' ev/h'],
+    ['Tipo predominante', sevPredominante],
+  ];
+  const cw3 = (PW-ML-MR)/4;
+  resCards.forEach((c,i) => {
+    const cx = ML + i*cw3;
+    fillRect(cx, y, cw3, 18, i%2===0?[235,244,250]:[255,255,255]);
+    strokeRect(cx, y, cw3, 18, C_SEP);
+    txt(c[0], cx+cw3/2, y+5.5, 6, C_SEC);
+    doc.setFont('helvetica','bold'); doc.setFontSize(i===3?7:11);
+    doc.setTextColor(...C_ACCENT);
+    doc.text(String(c[1]), cx+cw3/2, y+14, {align:'center'});
+  });
+  y += 24;
+
+  // ── TABLA DE HORAS ──
+  checkPage(30);
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt('DETALLE POR HORA', ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 7;
+
+  const suf = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª','9ª'];
+  const colsH = ['Hora','Inicio','Fin','Apneas','Tipo en esta hora'];
+  const wH = [(PW-ML-MR)*0.10,(PW-ML-MR)*0.13,(PW-ML-MR)*0.13,(PW-ML-MR)*0.13,(PW-ML-MR)*0.51];
+  fillRect(ML, y, PW-ML-MR, 5.5, [210,228,240]);
+  let cx2=ML;
+  colsH.forEach((c,i)=>{ txt(c, cx2+2, y+3.8, 7, C_ACCENT, true); cx2+=wH[i]; });
+  y += 5.5;
+  horas.forEach((h,i) => {
+    checkPage(6);
+    const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+    fillRect(ML, y, PW-ML-MR, 5.5, i%2===0?[255,255,255]:C_BG);
+    cx2=ML;
+    const row=[suf[i]||`${i+1}ª`,(h.hora_inicio||'--').slice(0,5),(h.hora_fin||'--').slice(0,5),h.total_interrupciones,g.texto];
+    row.forEach((v,j)=>{ txt(v, cx2+2, y+3.8, 7, C_PRI); cx2+=wH[j]; });
+    hLine(y+5.5); y+=5.5;
+  });
+  y += 8;
+
+  // ── DETALLE DE APNEAS POR HORA ──
+  for (let hi=0; hi<horas.length; hi++) {
+    const h = horas[hi];
+    checkPage(20);
+
+    fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+    txt(`APNEAS — ${suf[hi]||`${hi+1}ª`} HORA (${(h.hora_inicio||'').slice(0,5)}–${(h.hora_fin||'').slice(0,5)})`, ML+3, y+4.2, 7.5, C_ACCENT, true);
+    strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+    y += 7;
+
+    let interr = await api(`/interrupciones/${h.id}`);
+    if (!interr || !interr.length) {
+      txt('Sin interrupciones en esta hora', ML+4, y+4, 7.5, C_SEC);
+      y += 8; continue;
+    }
+    interr.forEach((d,i) => { if(!('numero_consecutivo' in d)) d.numero_consecutivo = d.numero_interrupcion||i+1; });
+
+    const colsA=['N°','Hora','Duración','SpO₂','FC (ECG)','Anotación'];
+    const wA=[0.07,0.09,0.10,0.09,0.10,0.55].map(f=>f*(PW-ML-MR));
+    fillRect(ML, y, PW-ML-MR, 5.5, [210,228,240]);
+    cx2=ML;
+    colsA.forEach((c,i)=>{ txt(c, cx2+2, y+3.8, 6.5, C_ACCENT, true); cx2+=wA[i]; });
+    y += 5.5;
+
+    for (let di=0; di<interr.length; di++) {
+      checkPage(6);
+      const dd = interr[di];
+      fillRect(ML, y, PW-ML-MR, 5.5, di%2===0?[255,255,255]:C_BG);
+      const num = dd.numero_consecutivo||di+1;
+      // Fetch FC from ECG
+      let fcLabel = String(dd.frecuencia_cardiaca||'--');
+      try {
+        const senECG = await api(`/senales/${dd.id}/ECG`);
+        if (senECG && senECG.length) {
+          const [cX, cY] = limpiarOutliersECG(senECG.map(r=>r.timestamp_ms), senECG.map(r=>parseFloat(r.valor)));
+          const fc = calcularFC(cX, cY);
+          if (fc) fcLabel = `${fc} lpm`;
+        }
+      } catch(e) {}
+      const row=[`#${num}`,(dd.hora_detectada||'--').slice(0,5),`${dd.duracion_segundos}s`,`${dd.spo2}%`,fcLabel,(dd.anotacion||'').slice(0,52)];
+      cx2=ML;
+      row.forEach((v,j)=>{ txt(v, cx2+2, y+3.8, 6, C_PRI); cx2+=wA[j]; });
+      hLine(y+5.5); y+=5.5;
+    }
+    y += 6;
+  }
+
+  // ── PIE DE PÁGINA ──
+  const totalPages = doc.getNumberOfPages();
+  for (let p=1; p<=totalPages; p++) {
+    doc.setPage(p);
+    hLine(PH-10, C_SEP);
+    txt('AOS Monitor — Reporte médico confidencial', ML, PH-6, 6, C_SEC);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6); doc.setTextColor(...C_SEC);
+    doc.text(`Página ${p} de ${totalPages}`, PW-MR, PH-6, {align:'right'});
+  }
+
+  const nombre = (pac.nombre||'paciente').replace(/\s+/g,'_');
+  doc.save(`AOS_Sesion_${nombre}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Generar PDF del monitoreo`;
+  toast('PDF del monitoreo completo generado', 'ok');
+}
 
 async function generarPDF() {
   const { jsPDF } = window.jspdf;
