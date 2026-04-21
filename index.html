@@ -854,11 +854,13 @@ async function doLogin() {
   document.getElementById('btn-login').disabled=true;
   ldEl.style.display='block';
   try {
-    const fd = new FormData();
-    fd.append('usuario', u); fd.append('contrasena', p);
-    const res = await fetch(API+'/login', { method:'POST', body:fd, redirect:'manual' });
-    const loc = res.headers.get('location') || '';
-    if ((res.status===302||res.status===200||res.status===0) && (loc.includes('/admin') || res.status===200)) {
+    const res = await fetch(API+'/api/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ usuario: u, contrasena: p })
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'ok') {
       state.usuario = u;
       document.getElementById('topbar-username').textContent = u;
       document.getElementById('topbar-avatar').textContent = u.slice(0,2).toUpperCase();
