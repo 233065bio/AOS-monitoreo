@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AOS Monitor — Detección de Apnea del Sueño</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -399,16 +400,22 @@ tbody td.sec{color:var(--txt-sec)}
 .chart-wrap{
   background:var(--white);border:1px solid var(--sep);
   border-radius:var(--radius-md);flex:1;min-height:0;
-  overflow:hidden;position:relative
+  overflow:hidden;position:relative;
+  display:flex;flex-direction:column;padding-top:28px
 }
 .chart-label{
-  position:absolute;top:10px;left:14px;
+  position:absolute;top:8px;left:14px;
   font-size:11px;font-weight:700;color:var(--accent);
   text-transform:uppercase;letter-spacing:0.07em;z-index:2
 }
 .charts-col{display:flex;flex-direction:column;flex:1;gap:10px;min-height:0}
-.chart-inner{position:relative;flex:1;min-height:80px}
-canvas.chart{width:100%!important;height:100%!important}
+.chart-inner{
+  position:relative;flex:1;min-height:0;width:100%
+}
+.chart-inner canvas{
+  position:absolute!important;top:0;left:0;
+  width:100%!important;height:100%!important
+}
 
 .controls-bar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
@@ -677,6 +684,10 @@ canvas.chart{width:100%!important;height:100%!important}
         </div>
         <button class="btn-ctrl" id="btn-pausar" disabled>⏸ Pausar</button>
         <button class="btn-ctrl" id="btn-reanudar" disabled>▶ Reanudar</button>
+        <button class="btn-ctrl" id="btn-pdf" style="background:#1E4D72;gap:5px" title="Generar PDF del monitoreo">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          PDF
+        </button>
         <div class="nav-arrows">
           <button class="nav-btn" id="btn-anterior" title="Apnea anterior">‹</button>
           <button class="nav-btn" id="btn-siguiente" title="Apnea siguiente">›</button>
@@ -710,7 +721,8 @@ let state = {
   ecgX: [], ecgY: [], ecgXSeg: [],
   respX: [], respY: [],
   ecgFs: 250,
-  ecgYMin: -5, ecgYMax: 5
+  ecgYMin: -5, ecgYMax: 5,
+  fcCalculada: null
 };
 
 let chartECG = null, chartResp = null;
@@ -1265,12 +1277,22 @@ async function cargarGraficas(interrId, duracionSeg) {
 
   state.ecgX = ecgX; state.ecgY = ecgY; state.ecgXSeg = ecgXSeg;
 
-  // FC
+  // FC — calculada desde ECG (misma lógica que la gráfica)
   const fc = calcularFC(ecgX, ecgY);
   const fcEl = document.getElementById('inf-fc');
-  if (fc) { fcEl.textContent = `❤ ${fc} lpm`; fcEl.className='val highlight'; }
-  else if (!senalesECG||!senalesECG.length) { fcEl.textContent='Simulado'; fcEl.className='val sec'; }
-  else { fcEl.textContent='Insuf. datos'; fcEl.className='val sec'; }
+  if (fc) {
+    fcEl.textContent = `❤ ${fc} lpm`;
+    fcEl.className = 'val highlight';
+    state.fcCalculada = fc;   // guardar para el PDF
+  } else if (!senalesECG || !senalesECG.length) {
+    fcEl.textContent = 'Simulado';
+    fcEl.className = 'val sec';
+    state.fcCalculada = null;
+  } else {
+    fcEl.textContent = 'Insuf. datos';
+    fcEl.className = 'val sec';
+    state.fcCalculada = null;
+  }
 
   // Resp
   let respX, respY;
@@ -1471,6 +1493,326 @@ function dibujarVentanaEn(tInicio) {
 
 /* ─── Enter en búsqueda ─── */
 document.getElementById('inp-buscar').addEventListener('keydown', e => { if(e.key==='Enter') cargarPacientes(); });
+
+/* ─── PDF Button ─── */
+document.getElementById('btn-pdf').addEventListener('click', generarPDF);
+
+async function generarPDF() {
+  const { jsPDF } = window.jspdf;
+  const btn = document.getElementById('btn-pdf');
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  toast('Generando PDF…');
+
+  const pac    = state.paciente;
+  const horas  = state.horas;
+  const interr = state.interrupciones;
+  const d      = interr[state.interrupcionIdx];
+
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const PW = 210, PH = 297;
+  const ML = 14, MR = 14, MT = 14;
+  let y = MT;
+
+  // ── Colores ──
+  const C_ACCENT = [42, 100, 150];
+  const C_SEC    = [90, 122, 138];
+  const C_PRI    = [26, 46, 59];
+  const C_SEP    = [224, 235, 242];
+  const C_BG     = [247, 250, 252];
+
+  // ── Helper: línea horizontal ──
+  function hLine(yy, color=C_SEP) {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.3);
+    doc.line(ML, yy, PW-MR, yy);
+  }
+
+  // ── Helper: texto ──
+  function txt(text, x, yy, size, color, bold=false) {
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.setFont('helvetica', bold?'bold':'normal');
+    doc.text(String(text), x, yy);
+  }
+
+  // ── Helper: rect relleno ──
+  function fillRect(x, yy, w, h, color) {
+    doc.setFillColor(...color);
+    doc.rect(x, yy, w, h, 'F');
+  }
+
+  // ── Helper: rect borde ──
+  function strokeRect(x, yy, w, h, color, lw=0.3) {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(lw);
+    doc.rect(x, yy, w, h, 'S');
+  }
+
+  // ══════════════════════════════════════════════
+  // CABECERA
+  // ══════════════════════════════════════════════
+  fillRect(ML, y, PW-ML-MR, 18, C_ACCENT);
+  txt('AOS Monitor', ML+4, y+7, 14, [255,255,255], true);
+  txt('Reporte de monitoreo de apnea del sueño', ML+4, y+13, 8, [180,210,230]);
+  txt(`Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`, PW-MR-4, y+13, 7, [180,210,230]);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.setTextColor(180,210,230);
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'})}`, PW-MR-4, y+13, {align:'right'});
+  y += 22;
+
+  // ══════════════════════════════════════════════
+  // DATOS DEL PACIENTE
+  // ══════════════════════════════════════════════
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt('DATOS DEL PACIENTE', ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 8;
+
+  const campos = [
+    ['Nombre',           pac.nombre || '--'],
+    ['Fecha de estudio', pac.fecha_estudio || '--'],
+    ['Edad',             pac.edad ? `${pac.edad} años` : '--'],
+    ['Sexo',             pac.sexo || '--'],
+    ['IMC',              pac.imc ? `${pac.imc} kg/m²` : '--'],
+    ['Epworth',          pac.epworth != null ? pac.epworth : '--'],
+    ['Enf. cardiovascular', pac.enfermedad_cardiovascular || '--'],
+  ];
+
+  const colW = (PW-ML-MR)/2;
+  campos.forEach((c, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const cx  = ML + col * colW;
+    const cy  = y + row * 6;
+    if (col === 0) fillRect(cx, cy, PW-ML-MR, 6, row%2===0?[255,255,255]:C_BG);
+    txt(c[0] + ':', cx+3, cy+4, 7.5, C_SEC);
+    txt(c[1], cx+colW*0.45, cy+4, 7.5, C_PRI, true);
+  });
+  y += Math.ceil(campos.length/2)*6 + 6;
+  hLine(y-2);
+
+  // ══════════════════════════════════════════════
+  // RESUMEN GENERAL DE LA SESIÓN
+  // ══════════════════════════════════════════════
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt('RESUMEN DE LA SESIÓN', ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 9;
+
+  const totalApneas  = horas.reduce((s,h)=>s+h.total_interrupciones,0);
+  const iah = totalApneas;
+  let severidad = 'Normal';
+  if (iah>=5&&iah<=14) severidad='AOS Leve';
+  else if (iah>=15&&iah<=29) severidad='AOS Moderado';
+  else if (iah>=30&&iah<=49) severidad='AOS Grave';
+  else if (iah>=50) severidad='AOS Muy Grave';
+
+  const resCards = [
+    ['Horas registradas', horas.length],
+    ['Total apneas', totalApneas],
+    ['IAH estimado', iah + ' ev/h'],
+    ['Severidad global', severidad],
+  ];
+  const cw = (PW-ML-MR)/4;
+  resCards.forEach((c,i) => {
+    const cx = ML + i*cw;
+    fillRect(cx, y, cw, 16, i%2===0?[235,244,250]:[255,255,255]);
+    strokeRect(cx, y, cw, 16, C_SEP);
+    txt(c[0], cx+cw/2, y+5.5, 6.5, C_SEC);
+    doc.setFont('helvetica','bold'); doc.setFontSize(11);
+    doc.setTextColor(...C_ACCENT);
+    doc.text(String(c[1]), cx+cw/2, y+12, {align:'center'});
+  });
+  y += 22;
+
+  // ══════════════════════════════════════════════
+  // TABLA DE HORAS
+  // ══════════════════════════════════════════════
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt('DETALLE POR HORA', ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 7;
+
+  const colsH = ['Hora','Inicio','Fin','Apneas','Severidad'];
+  const wH = [(PW-ML-MR)*0.12, (PW-ML-MR)*0.15, (PW-ML-MR)*0.15, (PW-ML-MR)*0.15, (PW-ML-MR)*0.43];
+  // encabezado tabla
+  fillRect(ML, y, PW-ML-MR, 5.5, [210,228,240]);
+  let cx2 = ML;
+  colsH.forEach((c,i) => { txt(c, cx2+2, y+3.8, 7, C_ACCENT, true); cx2+=wH[i]; });
+  y += 5.5;
+  const suf2 = ['1ª','2ª','3ª','4ª','5ª','6ª','7ª','8ª'];
+  horas.forEach((h,i) => {
+    const g = calcularGravedad(h.total_interrupciones,pac.epworth,pac.imc,pac.enfermedad_cardiovascular);
+    fillRect(ML, y, PW-ML-MR, 5.5, i%2===0?[255,255,255]:C_BG);
+    cx2 = ML;
+    const row = [suf2[i]||`${i+1}ª`, (h.hora_inicio||'--').slice(0,5), (h.hora_fin||'--').slice(0,5), h.total_interrupciones, g.texto];
+    row.forEach((v,j) => { txt(v, cx2+2, y+3.8, 7, C_PRI); cx2+=wH[j]; });
+    hLine(y+5.5);
+    y += 5.5;
+  });
+  y += 6;
+
+  // ══════════════════════════════════════════════
+  // DETALLE APNEAS (tabla completa)
+  // ══════════════════════════════════════════════
+  if (y > PH - 60) { doc.addPage(); y = MT; }
+  fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+  txt(`APNEAS DETECTADAS — ${suf2[state.horaIdx]||''} HORA`, ML+3, y+4.2, 8, C_ACCENT, true);
+  strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+  y += 7;
+
+  const colsA = ['N°','Hora','Duración','SpO2','FC (lpm)','Anotación'];
+  const wA = [0.08,0.1,0.1,0.1,0.1,0.52].map(f=>f*(PW-ML-MR));
+  fillRect(ML, y, PW-ML-MR, 5.5, [210,228,240]);
+  cx2 = ML;
+  colsA.forEach((c,i) => { txt(c, cx2+2, y+3.8, 7, C_ACCENT, true); cx2+=wA[i]; });
+  y += 5.5;
+
+  interr.forEach((dd,i) => {
+    if (y > PH-20) { doc.addPage(); y=MT; }
+    fillRect(ML, y, PW-ML-MR, 5.5, i%2===0?[255,255,255]:C_BG);
+    const num = dd.numero_consecutivo || dd.numero_interrupcion || i+1;
+    const fcVal = dd.id === d.id && state.fcCalculada ? `${state.fcCalculada}` : `${dd.frecuencia_cardiaca}`;
+    const row = [
+      `#${num}`,
+      (dd.hora_detectada||'--').slice(0,5),
+      `${dd.duracion_segundos}s`,
+      `${dd.spo2}%`,
+      fcVal,
+      (dd.anotacion||'').slice(0,55)
+    ];
+    cx2 = ML;
+    row.forEach((v,j) => { txt(v, cx2+2, y+3.8, 6.5, C_PRI); cx2+=wA[j]; });
+    hLine(y+5.5);
+    y += 5.5;
+  });
+  y += 8;
+
+  // ══════════════════════════════════════════════
+  // GRÁFICAS ECG Y FLUJO (estilo papel ECG)
+  // ══════════════════════════════════════════════
+  if (state.ecgXSeg.length && state.ecgY.length) {
+    if (y > PH - 80) { doc.addPage(); y = MT; }
+
+    fillRect(ML, y, PW-ML-MR, 6, [235,244,250]);
+    txt('SEÑALES BIOMÉTRICAS', ML+3, y+4.2, 8, C_ACCENT, true);
+    strokeRect(ML, y, PW-ML-MR, 6, C_SEP);
+    y += 9;
+
+    // FC badge en el encabezado de la gráfica
+    txt('ECG', ML, y+4, 8, C_ACCENT, true);
+    if (state.fcCalculada) {
+      txt(`FC: ${state.fcCalculada} lpm`, ML+12, y+4, 7.5, [39,174,96], true);
+    }
+    y += 6;
+
+    // ── Función para dibujar mini-gráfica estilo papel ECG ──
+    function drawSignal(xs, ys, yPos, hGraph, lineColor, gridMaj, gridMin, isPaper=false) {
+      const gW = PW-ML-MR;
+      // Fondo blanco
+      fillRect(ML, yPos, gW, hGraph, [255,255,255]);
+      strokeRect(ML, yPos, gW, hGraph, C_SEP, 0.2);
+
+      if (!xs.length) return;
+      const xMin = xs[0], xMax = xs[xs.length-1];
+      const yMin = Math.min(...ys), yMax = Math.max(...ys);
+      const yPad = Math.max((yMax-yMin)*0.08, 0.2);
+      const yLo = yMin-yPad, yHi = yMax+yPad;
+
+      const scX = v => ML + ((v-xMin)/(xMax-xMin||1)) * gW;
+      const scY = v => yPos+hGraph - ((v-yLo)/(yHi-yLo||1))*hGraph;
+
+      // Grid mayor
+      doc.setDrawColor(...gridMaj);
+      doc.setLineWidth(0.15);
+      const gridN = isPaper ? 10 : 6;
+      for (let g=0;g<=gridN;g++) {
+        const gx = ML + g*(gW/gridN);
+        doc.line(gx, yPos, gx, yPos+hGraph);
+        const gy = yPos + g*(hGraph/gridN);
+        doc.line(ML, gy, ML+gW, gy);
+      }
+      // Grid menor (solo ECG)
+      if (isPaper) {
+        doc.setDrawColor(...gridMin);
+        doc.setLineWidth(0.07);
+        for (let g=0;g<=gridN*5;g++) {
+          const gx = ML + g*(gW/(gridN*5));
+          doc.line(gx, yPos, gx, yPos+hGraph);
+          const gy = yPos + g*(hGraph/(gridN*5));
+          doc.line(ML, gy, ML+gW, gy);
+        }
+      }
+      // Línea cero (ECG)
+      if (isPaper) {
+        doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+        const zy = scY(0);
+        if (zy>=yPos && zy<=yPos+hGraph) doc.line(ML, zy, ML+gW, zy);
+      }
+
+      // Señal — downsampling a ~300 puntos para PDF limpio
+      const step = Math.max(1, Math.floor(xs.length/300));
+      doc.setDrawColor(...lineColor);
+      doc.setLineWidth(isPaper ? 0.4 : 0.5);
+      let first = true;
+      for (let i=0; i<xs.length; i+=step) {
+        const px = scX(xs[i]), py = scY(ys[i]);
+        if (py < yPos-1 || py > yPos+hGraph+1) { first=true; continue; }
+        if (first) { doc.moveTo(px,py); first=false; }
+        else doc.lineTo(px,py);
+      }
+      doc.stroke();
+
+      // Eje X: marcas de tiempo
+      doc.setFontSize(5.5); doc.setTextColor(...C_SEC); doc.setFont('helvetica','normal');
+      for (let g=0;g<=5;g++) {
+        const tx = xMin + g*(xMax-xMin)/5;
+        doc.text(tx.toFixed(1)+'s', scX(tx), yPos+hGraph+3, {align:'center'});
+      }
+    }
+
+    // — ECG (papel, 28mm alto) —
+    const SHOW_N = Math.min(state.ecgXSeg.length, 2000);
+    const step_e = Math.max(1, Math.floor(state.ecgXSeg.length/SHOW_N));
+    const xsEpdf=[], ysEpdf=[];
+    for(let i=0;i<state.ecgXSeg.length;i+=step_e){ xsEpdf.push(state.ecgXSeg[i]); ysEpdf.push(state.ecgY[i]); }
+
+    drawSignal(xsEpdf, ysEpdf, y, 28, [42,100,150], [245,160,160], [250,212,212], true);
+    y += 32;
+
+    // — Flujo Respiratorio (18mm alto) —
+    if (state.respX.length) {
+      txt('Flujo Respiratorio', ML, y+4, 8, [39,174,96], true);
+      y += 6;
+      drawSignal(state.respX, state.respY, y, 18, [39,174,96], [204,221,238], [204,221,238], false);
+      y += 22;
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  // PIE DE PÁGINA
+  // ══════════════════════════════════════════════
+  const totalPages = doc.getNumberOfPages();
+  for (let p=1; p<=totalPages; p++) {
+    doc.setPage(p);
+    hLine(PH-10, C_SEP);
+    txt('AOS Monitor — Reporte médico confidencial', ML, PH-6, 6, C_SEC);
+    txt(`Página ${p} de ${totalPages}`, PW-MR, PH-6, 6, C_SEC);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(6); doc.setTextColor(...C_SEC);
+    doc.text(`Página ${p} de ${totalPages}`, PW-MR, PH-6, {align:'right'});
+  }
+
+  // Guardar
+  const nombre = (pac.nombre||'paciente').replace(/\s+/g,'_');
+  doc.save(`AOS_${nombre}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+  btn.disabled = false;
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF`;
+  toast('PDF generado correctamente', 'ok');
+}
 </script>
 </body>
 </html>
