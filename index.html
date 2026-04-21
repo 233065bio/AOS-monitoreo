@@ -1013,7 +1013,6 @@ async function cargarHoras(sesId) {
   `;
 
   // Tarjetas
-  const pac = state.paciente;
   document.getElementById('horas-grid').innerHTML = horas.map((h,i) => {
     const hi = (h.hora_inicio||'--').slice(0,5);
     const hf = (h.hora_fin||'--').slice(0,5);
