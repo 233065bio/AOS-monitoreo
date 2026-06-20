@@ -1129,12 +1129,12 @@ async function abrirDetalleHora(horaIdx, horaId) {
         const [cX, cY] = limpiarOutliersECG(rawX, rawY);
         const fc = calcularFC(cX, cY);
         if (fc) {
-           el.textContent = `❤ ${fc} lpm`;
-           el.style.color = 'var(--ok)';
-           el.style.fontWeight = '600';
-           el.style.fontSize = '';
-           d._fcCalculada = fc;
-           if (metodo === 'segmento_limpio') el.title = 'FC calculada sobre segmento sin artefactos';
+          el.textContent = `❤ ${fc} lpm`;
+          el.style.color = 'var(--ok)';
+          el.style.fontWeight = '600';
+          el.style.fontSize = '';
+          // cache para el PDF
+          d._fcCalculada = fc;
         } else {
           el.textContent = `${d.frecuencia_cardiaca} lpm`;
           el.style.color = '';
@@ -1330,7 +1330,7 @@ async function cargarGraficas(interrId, duracionSeg) {
   state.ecgX = ecgX; state.ecgY = ecgY; state.ecgXSeg = ecgXSeg;
 
   // FC — calculada desde ECG (misma lógica que la gráfica)
-  const { fc, metodo } = calcularFCRobusta(ecgX, ecgY);
+  const fc = calcularFC(ecgX, ecgY);
   const fcEl = document.getElementById('inf-fc');
   if (fc) {
     fcEl.textContent = `❤ ${fc} lpm`;
@@ -1721,7 +1721,7 @@ async function generarPDFSesion() {
         const senECG = await api(`/senales/${dd.id}/ECG`);
         if (senECG && senECG.length) {
           const [cX, cY] = limpiarOutliersECG(senECG.map(r=>r.timestamp_ms), senECG.map(r=>parseFloat(r.valor)));
-          const { fc } = calcularFCRobusta(cX, cY);
+          const fc = calcularFC(cX, cY);
           if (fc) fcLabel = `${fc} lpm`;
         }
       } catch(e) {}
