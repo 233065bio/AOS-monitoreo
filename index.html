@@ -236,6 +236,16 @@ tbody td.sec{color:var(--txt-sec)}
 .empty-state{padding:60px 20px;text-align:center;color:var(--txt-sec);font-size:14px}
 .empty-state svg{width:48px;height:48px;stroke:var(--sep);margin-bottom:12px}
 
+/* Fechas múltiples (chips) en tabla de pacientes */
+.fecha-chips{display:flex;flex-wrap:wrap;gap:5px;max-width:260px}
+.fecha-chip{
+  display:inline-flex;align-items:center;
+  padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;
+  background:var(--accent-xl);color:var(--accent);border:1px solid var(--accent-lt);
+  white-space:nowrap
+}
+.fecha-chip.more{background:var(--sep);color:var(--txt-sec)}
+
 /* Spinner */
 .spinner{
   width:40px;height:40px;margin:60px auto;
@@ -293,6 +303,67 @@ tbody td.sec{color:var(--txt-sec)}
 .sev-moderado{color:#C06020;background:#FFF3E0;border-color:#F5AA70}
 .sev-grave{color:#C04020;background:#FFF0EE;border-color:#F0A090}
 .sev-muy-grave{color:var(--crit);background:#FFF0F0;border-color:#F0A0A0}
+
+/* ═══════════════════════════════════════════════════════
+   HUB DE PACIENTE (nuevo)
+═══════════════════════════════════════════════════════ */
+.hub-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:18px
+}
+.hub-card{
+  position:relative;overflow:hidden;
+  background:var(--white);
+  border:1.5px solid var(--sep);border-radius:var(--radius-lg);
+  min-height:200px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .22s;box-shadow:var(--shadow-sm)
+}
+.hub-card::before{
+  content:'';position:absolute;inset:0;
+  background-image:radial-gradient(circle,rgba(42,100,150,0.14) 1px,transparent 1.4px);
+  background-size:14px 14px;opacity:.55
+}
+.hub-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-3px)}
+.hub-card.disabled{cursor:not-allowed;opacity:.85}
+.hub-card.disabled:hover{transform:none;box-shadow:var(--shadow-sm)}
+.hub-card-label{
+  position:relative;z-index:1;
+  background:var(--white);padding:14px 24px;border-radius:var(--radius-lg);
+  font-family:'Playfair Display',serif;font-style:italic;font-weight:600;
+  font-size:16px;color:var(--txt-pri);text-align:center;
+  box-shadow:var(--shadow-sm);border:1px solid var(--sep)
+}
+.hub-card-soon{
+  position:absolute;top:10px;right:10px;z-index:2;
+  font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--txt-sec);background:var(--accent-xl);
+  padding:2px 8px;border-radius:20px;border:1px solid var(--accent-lt)
+}
+
+/* ═══════════════════════════════════════════════════════
+   SECCIONES REALIZADAS (lista de noches/sesiones)
+═══════════════════════════════════════════════════════ */
+.secciones-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:16px
+}
+.seccion-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1.5px solid var(--sep);padding:20px;
+  cursor:pointer;transition:all .22s;box-shadow:var(--shadow-sm);
+  position:relative;overflow:hidden
+}
+.seccion-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent-lt);transition:background .22s
+}
+.seccion-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.seccion-card:hover::before{background:var(--accent)}
+.seccion-card-label{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em}
+.seccion-card-fecha{font-size:17px;font-weight:600;color:var(--txt-pri);margin:6px 0 2px}
+.seccion-card-sub{font-size:12px;color:var(--txt-sec)}
 
 /* ═══════════════════════════════════════════════════════
    DETALLE HORA
@@ -533,7 +604,7 @@ tbody td.sec{color:var(--txt-sec)}
           <thead>
             <tr>
               <th>Nombre del paciente</th>
-              <th>Fecha estudio</th>
+              <th>Fecha(s) estudio</th>
               <th>Edad</th>
               <th>Sexo</th>
               <th>Enf. cardiovascular</th>
@@ -549,13 +620,85 @@ tbody td.sec{color:var(--txt-sec)}
 </div>
 
 <!-- ══════════════════════════════
+     PANTALLA: HUB DE PACIENTE
+══════════════════════════════ -->
+<div id="screen-hub" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-hub">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Pacientes
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-hub"></span>
+      <span class="sep">›</span>
+      <span>Sesión de sueño</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-hub">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div>
+        <h1 id="hub-title">Sesión de sueño</h1>
+        <p>Seleccione un apartado para continuar con el monitoreo del paciente</p>
+      </div>
+    </div>
+    <div class="hub-grid">
+      <div class="hub-card disabled" id="hub-card-historial">
+        <span class="hub-card-soon">Próximamente</span>
+        <div class="hub-card-label">Añadir historial</div>
+      </div>
+      <div class="hub-card disabled" id="hub-card-epworth">
+        <span class="hub-card-soon">Próximamente</span>
+        <div class="hub-card-label">Realizar encuestas de EPWORTH</div>
+      </div>
+      <div class="hub-card" id="hub-card-secciones">
+        <div class="hub-card-label">Secciones realizadas</div>
+      </div>
+      <div class="hub-card disabled" id="hub-card-resumen">
+        <span class="hub-card-soon">Próximamente</span>
+        <div class="hub-card-label">Resumen del monitoreo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: SECCIONES REALIZADAS (lista de noches)
+══════════════════════════════ -->
+<div id="screen-secciones" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-secciones">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-secciones"></span>
+      <span class="sep">›</span>
+      <span>Secciones realizadas</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-secciones">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Secciones realizadas</h1>
+      <p>Seleccione una noche de monitoreo para ver el resumen por hora</p>
+    </div>
+    <div class="secciones-grid" id="secciones-grid">
+      <div style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
      PANTALLA: HORAS
 ══════════════════════════════ -->
 <div id="screen-horas" class="screen">
   <div class="topbar">
     <button class="topbar-btn-back" id="btn-back-horas">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-      Pacientes
+      Secciones
     </button>
     <div class="topbar-breadcrumb">
       <span id="breadcrumb-paciente"></span>
@@ -713,7 +856,8 @@ const API = "https://api-biomedica-production.up.railway.app";
 /* ─── Estado global ─── */
 let state = {
   usuario: null,
-  paciente: null,
+  paciente: null,          // grupo de paciente { nombre, edad, sexo, enfermedad_cardiovascular, registros:[{id, fecha_estudio, raw}] }
+  registroActivo: null,    // registro (id + fecha) seleccionado en "Secciones realizadas"
   sesionId: null,
   horas: [],
   horaIdx: 0,
@@ -737,6 +881,8 @@ let chartECG = null, chartResp = null;
 const screens = {
   login:       document.getElementById('screen-login'),
   pacientes:   document.getElementById('screen-pacientes'),
+  hub:         document.getElementById('screen-hub'),
+  secciones:   document.getElementById('screen-secciones'),
   horas:       document.getElementById('screen-horas'),
   detalle:     document.getElementById('screen-detalle'),
   interrupcion:document.getElementById('screen-interrupcion')
@@ -897,8 +1043,9 @@ async function doLogin() {
 }
 
 /* ─── Logout ─── */
-['btn-logout','btn-logout-2','btn-logout-3','btn-logout-4'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => {
+['btn-logout','btn-logout-hub','btn-logout-secciones','btn-logout-2','btn-logout-3','btn-logout-4'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', () => {
     state = { ...state, usuario:null, paciente:null };
     document.getElementById('inp-user').value='';
     document.getElementById('inp-pass').value='';
@@ -913,7 +1060,39 @@ document.getElementById('inp-buscar').addEventListener('input', () => {
   debounceTimer = setTimeout(cargarPacientes, 300);
 });
 document.getElementById('btn-refresh').addEventListener('click', cargarPacientes);
-document.getElementById('btn-back-horas').addEventListener('click', () => show('pacientes'));
+
+/* Agrupa registros (uno por sesión/noche) por nombre de paciente.
+   Esto permite mostrar varias fechas de estudio para el mismo paciente
+   y listar todas sus "secciones realizadas" (noches de monitoreo). */
+function agruparPacientesPorNombre(datos) {
+  const grupos = new Map();
+  datos.forEach(p => {
+    const clave = (p.nombre||'--').trim().toLowerCase();
+    if (!grupos.has(clave)) {
+      grupos.set(clave, {
+        nombre: p.nombre,
+        edad: p.edad,
+        sexo: p.sexo,
+        enfermedad_cardiovascular: p.enfermedad_cardiovascular,
+        imc: p.imc,
+        epworth: p.epworth,
+        registros: []
+      });
+    }
+    const g = grupos.get(clave);
+    g.registros.push({ id: p.id, fecha_estudio: p.fecha_estudio, raw: p });
+    // Usar los datos más recientes (por fecha) para edad/sexo/etc.
+    if (!g._fechaRef || (p.fecha_estudio && p.fecha_estudio > g._fechaRef)) {
+      g._fechaRef = p.fecha_estudio;
+      g.edad = p.edad; g.sexo = p.sexo;
+      g.enfermedad_cardiovascular = p.enfermedad_cardiovascular;
+      g.imc = p.imc; g.epworth = p.epworth;
+    }
+  });
+  // Ordenar registros de cada grupo por fecha descendente
+  grupos.forEach(g => g.registros.sort((a,b) => (b.fecha_estudio||'').localeCompare(a.fecha_estudio||'')));
+  return Array.from(grupos.values());
+}
 
 async function cargarPacientes() {
   const filtro = document.getElementById('inp-buscar').value.trim();
@@ -926,33 +1105,86 @@ async function cargarPacientes() {
     tbody.innerHTML='<tr><td colspan="5"><div class="empty-state">No se encontraron pacientes</div></td></tr>';
     return;
   }
-  tbody.innerHTML = datos.map(p => `
-    <tr data-id="${p.id}" data-pac='${JSON.stringify(p).replace(/'/g,"&#39;")}'>
-      <td><strong>${p.nombre||'--'}</strong></td>
-      <td class="sec">${p.fecha_estudio||'--'}</td>
-      <td class="sec">${p.edad||'--'}</td>
-      <td><span class="badge badge-${(p.sexo||'').toLowerCase()==='f'?'f':'m'}">${p.sexo||'--'}</span></td>
-      <td class="sec">${p.enfermedad_cardiovascular||'--'}</td>
-    </tr>
-  `).join('');
+
+  const grupos = agruparPacientesPorNombre(datos);
+
+  tbody.innerHTML = grupos.map((g,gi) => {
+    const MAX_VISIBLE = 3;
+    const fechasVisibles = g.registros.slice(0, MAX_VISIBLE).map(r => r.fecha_estudio||'--');
+    const restantes = g.registros.length - MAX_VISIBLE;
+    const chips = fechasVisibles.map(f => `<span class="fecha-chip">${f}</span>`).join('')
+      + (restantes > 0 ? `<span class="fecha-chip more">+${restantes}</span>` : '');
+    return `
+      <tr data-gidx="${gi}">
+        <td><strong>${g.nombre||'--'}</strong></td>
+        <td><div class="fecha-chips">${chips}</div></td>
+        <td class="sec">${g.edad||'--'}</td>
+        <td><span class="badge badge-${(g.sexo||'').toLowerCase()==='f'?'f':'m'}">${g.sexo||'--'}</span></td>
+        <td class="sec">${g.enfermedad_cardiovascular||'--'}</td>
+      </tr>
+    `;
+  }).join('');
+
   tbody.querySelectorAll('tr').forEach(tr => {
-    tr.addEventListener('click', () => abrirPaciente(tr.dataset.id, JSON.parse(tr.dataset.pac.replace(/&#39;/g,"'"))));
+    tr.addEventListener('click', () => abrirPaciente(grupos[parseInt(tr.dataset.gidx)]));
   });
 }
 
-async function abrirPaciente(id, pac) {
-  state.paciente = pac;
-  document.getElementById('breadcrumb-paciente').textContent = pac.nombre;
-  document.getElementById('breadcrumb-paciente-2').textContent = pac.nombre;
-  document.getElementById('breadcrumb-interr-pac').textContent = pac.nombre;
+/* ─── Hub de paciente ─── */
+document.getElementById('btn-back-hub').addEventListener('click', () => show('pacientes'));
+document.getElementById('hub-card-secciones').addEventListener('click', () => abrirSecciones());
+['hub-card-historial','hub-card-epworth','hub-card-resumen'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => toast('Este apartado estará disponible próximamente'));
+});
+
+async function abrirPaciente(grupo) {
+  state.paciente = grupo;
+  document.getElementById('breadcrumb-paciente-hub').textContent = grupo.nombre;
+  document.getElementById('hub-title').textContent = grupo.nombre;
+  show('hub');
+}
+
+/* ─── Secciones realizadas (noches de monitoreo) ─── */
+document.getElementById('btn-back-secciones').addEventListener('click', () => show('hub'));
+
+function abrirSecciones() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-secciones').textContent = pac.nombre;
+  show('secciones');
+
+  const grid = document.getElementById('secciones-grid');
+  if (!pac.registros.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesiones registradas para este paciente</div>';
+    return;
+  }
+  grid.innerHTML = pac.registros.map((r,i) => `
+    <div class="seccion-card" data-ridx="${i}">
+      <div class="seccion-card-label">Sección ${i+1}</div>
+      <div class="seccion-card-fecha">${r.fecha_estudio||'--'}</div>
+      <div class="seccion-card-sub">Noche de monitoreo</div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.seccion-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const r = pac.registros[parseInt(card.dataset.ridx)];
+      abrirSesionEspecifica(r);
+    });
+  });
+}
+
+async function abrirSesionEspecifica(registro) {
+  state.registroActivo = registro;
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente').textContent = `${pac.nombre} (${registro.fecha_estudio||'--'})`;
   document.getElementById('horas-title').textContent = pac.nombre;
 
   show('horas');
   document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
   document.getElementById('summary-bar').innerHTML = '';
 
-  // Obtener sesión
+  // Obtener sesión usando el id del registro seleccionado
   let sesId = null;
+  const id = registro.id;
   const res1 = await api(`/sesion/por-paciente/${id}`);
   if (res1?.sesion_id) sesId = res1.sesion_id;
   if (!sesId) {
@@ -963,11 +1195,13 @@ async function abrirPaciente(id, pac) {
   state.sesionId = sesId;
 
   if (!sesId) {
-    document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesión registrada para este paciente</div>';
+    document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesión registrada para esta noche</div>';
     return;
   }
   cargarHoras(sesId);
 }
+
+document.getElementById('btn-back-horas').addEventListener('click', () => abrirSecciones());
 
 async function cargarHoras(sesId) {
   let horas = await api(`/horas-sesion/${sesId}`);
@@ -1609,7 +1843,7 @@ async function generarPDFSesion() {
   y += 8;
   const fields = [
     ['Nombre', pac.nombre||'--'], ['Edad', pac.edad||'--'],
-    ['Sexo', pac.sexo||'--'], ['Fecha de estudio', pac.fecha_estudio||'--'],
+    ['Sexo', pac.sexo||'--'], ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha_estudio)||'--'],
     ['IMC', pac.imc||'--'], ['Epworth', pac.epworth||'--'],
     ['Enf. cardiovascular', pac.enfermedad_cardiovascular||'--']
   ];
@@ -1826,7 +2060,7 @@ async function generarPDF() {
 
   const campos = [
     ['Nombre',           pac.nombre || '--'],
-    ['Fecha de estudio', pac.fecha_estudio || '--'],
+    ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha_estudio) || '--'],
     ['Edad',             pac.edad ? `${pac.edad} años` : '--'],
     ['Sexo',             pac.sexo || '--'],
     ['IMC',              pac.imc ? `${pac.imc} kg/m²` : '--'],
