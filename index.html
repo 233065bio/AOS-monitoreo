@@ -38,7 +38,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt-pri)}
 button{cursor:pointer;border:none;outline:none;font-family:inherit}
-input,textarea{font-family:inherit;outline:none}
+input,textarea,select{font-family:inherit;outline:none}
 
 /* ═══════════════════════════════════════════════════════
    SCROLLBAR
@@ -305,40 +305,49 @@ tbody td.sec{color:var(--txt-sec)}
 .sev-muy-grave{color:var(--crit);background:#FFF0F0;border-color:#F0A0A0}
 
 /* ═══════════════════════════════════════════════════════
-   HUB DE PACIENTE (nuevo)
+   HUB DE PACIENTE (estilo unificado tipo "hora-card")
 ═══════════════════════════════════════════════════════ */
 .hub-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:18px
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:16px
 }
 .hub-card{
-  position:relative;overflow:hidden;
-  background:var(--white);
-  border:1.5px solid var(--sep);border-radius:var(--radius-lg);
-  min-height:200px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:all .22s;box-shadow:var(--shadow-sm)
+  background:var(--white);border-radius:var(--radius-md);
+  border:1.5px solid var(--sep);padding:20px;
+  cursor:pointer;transition:all .22s;
+  box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;min-height:148px
 }
 .hub-card::before{
-  content:'';position:absolute;inset:0;
-  background-image:radial-gradient(circle,rgba(42,100,150,0.14) 1px,transparent 1.4px);
-  background-size:14px 14px;opacity:.55
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent-lt);transition:background .22s
 }
-.hub-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-3px)}
-.hub-card.disabled{cursor:not-allowed;opacity:.85}
-.hub-card.disabled:hover{transform:none;box-shadow:var(--shadow-sm)}
-.hub-card-label{
-  position:relative;z-index:1;
-  background:var(--white);padding:14px 24px;border-radius:var(--radius-lg);
-  font-family:'Playfair Display',serif;font-style:italic;font-weight:600;
-  font-size:16px;color:var(--txt-pri);text-align:center;
-  box-shadow:var(--shadow-sm);border:1px solid var(--sep)
+.hub-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.hub-card:hover::before{background:var(--accent)}
+.hub-card.disabled{cursor:not-allowed;opacity:.7}
+.hub-card.disabled:hover{transform:none;box-shadow:var(--shadow-sm);border-color:var(--sep)}
+.hub-card.disabled:hover::before{background:var(--accent-lt)}
+.hub-card-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:var(--accent-xl);display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px
 }
+.hub-card-icon svg{width:20px;height:20px;stroke:var(--accent)}
+.hub-card-num{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em}
+.hub-card-label{font-size:16px;font-weight:600;color:var(--txt-pri);margin:6px 0 2px;font-family:'Playfair Display',serif}
+.hub-card-desc{font-size:12px;color:var(--txt-sec);margin-bottom:auto}
 .hub-card-soon{
-  position:absolute;top:10px;right:10px;z-index:2;
-  font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  color:var(--txt-sec);background:var(--accent-xl);
-  padding:2px 8px;border-radius:20px;border:1px solid var(--accent-lt)
+  align-self:flex-start;margin-top:12px;
+  font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--txt-sec);background:var(--bg);
+  padding:3px 9px;border-radius:20px;border:1px solid var(--sep)
+}
+.hub-card-status{
+  align-self:flex-start;margin-top:12px;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:20px;
+  font-size:11px;font-weight:700;border:1px solid currentColor
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -364,6 +373,114 @@ tbody td.sec{color:var(--txt-sec)}
 .seccion-card-label{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em}
 .seccion-card-fecha{font-size:17px;font-weight:600;color:var(--txt-pri);margin:6px 0 2px}
 .seccion-card-sub{font-size:12px;color:var(--txt-sec)}
+
+/* ═══════════════════════════════════════════════════════
+   FORMULARIOS (Historial médico / Epworth)
+═══════════════════════════════════════════════════════ */
+.form-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1px solid var(--sep);box-shadow:var(--shadow-sm);
+  max-width:640px;overflow:hidden
+}
+.form-card-header{
+  padding:16px 24px;background:var(--accent-xl);
+  border-bottom:1px solid var(--accent-lt);
+  display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+.form-card-header h3{font-size:14px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em}
+.form-card-body{padding:24px}
+.form-q{margin-bottom:22px}
+.form-q:last-child{margin-bottom:0}
+.form-q-label{font-size:13.5px;font-weight:600;color:var(--txt-pri);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.form-q-num{
+  width:22px;height:22px;border-radius:50%;background:var(--accent);color:white;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+.opt-row{display:flex;gap:10px;flex-wrap:wrap}
+.opt-btn{
+  padding:9px 18px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--sep);background:var(--bg);
+  font-size:13px;font-weight:600;color:var(--txt-sec);
+  transition:all .15s
+}
+.opt-btn:hover{border-color:var(--border);background:var(--accent-xl)}
+.opt-btn.active{background:var(--accent);border-color:var(--accent);color:white}
+.form-input-num{
+  width:160px;padding:10px 14px;
+  border:1.5px solid var(--sep);border-radius:var(--radius-sm);
+  font-size:14px;color:var(--txt-pri);background:var(--bg);
+  transition:border-color .2s,box-shadow .2s
+}
+.form-input-num:focus{border-color:var(--border);box-shadow:0 0 0 3px var(--accent-xl)}
+.input-suffix{font-size:12.5px;color:var(--txt-sec);margin-left:8px}
+.imc-box{
+  margin-top:6px;padding:16px 18px;border-radius:var(--radius-md);
+  background:var(--accent-xl);border:1.5px solid var(--accent-lt);
+  display:flex;align-items:center;justify-content:space-between;gap:16px
+}
+.imc-box .imc-label{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em}
+.imc-box .imc-value{font-size:26px;font-weight:700;color:var(--txt-pri);line-height:1;margin-top:2px}
+.imc-box .imc-cat{
+  font-size:12px;font-weight:700;padding:5px 12px;border-radius:20px;border:1px solid currentColor
+}
+.form-actions{
+  display:flex;gap:10px;justify-content:flex-end;
+  padding:18px 24px;border-top:1px solid var(--sep);background:var(--bg)
+}
+.btn-secondary{
+  padding:10px 20px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:var(--txt-sec);
+  background:var(--white);border:1.5px solid var(--sep);transition:all .2s
+}
+.btn-secondary:hover{background:var(--sep)}
+.btn-save-form{
+  padding:10px 24px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;color:white;background:var(--accent);
+  display:flex;align-items:center;gap:6px;transition:all .2s
+}
+.btn-save-form:hover{background:var(--accent-hv)}
+.btn-save-form:disabled{opacity:.6;cursor:not-allowed}
+.form-readonly-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 24px;background:#F0FFF5;border-bottom:1px solid #C8EDD8;
+  font-size:13px;color:#2E7D52
+}
+.form-readonly-banner.is-empty{background:var(--accent-xl);border-bottom-color:var(--accent-lt);color:var(--accent)}
+.btn-edit-form{
+  padding:6px 14px;border-radius:var(--radius-sm);
+  font-size:12px;font-weight:600;color:var(--accent);
+  background:white;border:1.5px solid var(--accent-lt);transition:all .2s
+}
+.btn-edit-form:hover{background:var(--accent-xl)}
+
+/* Epworth dropdowns */
+.epworth-q{
+  display:grid;grid-template-columns:1fr 190px;gap:18px;align-items:start;
+  padding:16px 0;border-bottom:1px solid var(--sep)
+}
+.epworth-q:last-of-type{border-bottom:none}
+.epworth-q-text{font-size:13.5px;color:var(--txt-pri);line-height:1.5}
+.epworth-q-text .epworth-q-bold{font-weight:600}
+.epworth-select{
+  width:100%;padding:9px 12px;
+  border:1.5px solid var(--sep);border-radius:var(--radius-sm);
+  font-size:13px;color:var(--txt-pri);background:var(--white);
+  transition:border-color .2s,box-shadow .2s;cursor:pointer
+}
+.epworth-select:focus{border-color:var(--border);box-shadow:0 0 0 3px var(--accent-xl)}
+.epworth-total-box{
+  margin-top:18px;padding:18px 20px;border-radius:var(--radius-md);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  border:1.5px solid
+}
+.epworth-total-box .et-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em}
+.epworth-total-box .et-value{font-size:30px;font-weight:700;line-height:1;margin-top:2px}
+.epworth-total-box .et-interp{font-size:13px;font-weight:600;text-align:right;max-width:260px;line-height:1.4}
+.epworth-scale-hint{
+  display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--txt-sec);
+  margin-bottom:18px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm)
+}
+.epworth-scale-hint b{color:var(--txt-pri)}
 
 /* ═══════════════════════════════════════════════════════
    DETALLE HORA
@@ -521,12 +638,14 @@ tbody td.sec{color:var(--txt-sec)}
 @media(max-width:900px){
   .summary-bar{grid-template-columns:repeat(2,1fr)}
   .interr-sidebar{width:260px}
+  .epworth-q{grid-template-columns:1fr}
 }
 @media(max-width:650px){
   .page-content{padding:16px}
   .summary-bar{grid-template-columns:1fr 1fr}
   .interr-layout{flex-direction:column}
   .interr-sidebar{width:100%;border-right:none;border-bottom:1px solid var(--sep)}
+  .form-card{max-width:100%}
 }
 </style>
 </head>
@@ -644,20 +763,173 @@ tbody td.sec{color:var(--txt-sec)}
       </div>
     </div>
     <div class="hub-grid">
-      <div class="hub-card disabled" id="hub-card-historial">
-        <span class="hub-card-soon">Próximamente</span>
-        <div class="hub-card-label">Añadir historial</div>
+      <div class="hub-card" id="hub-card-historial">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 01</div>
+        <div class="hub-card-label">Historial médico</div>
+        <div class="hub-card-desc">Datos clínicos base: cardiovascular, género, edad, talla, peso e IMC</div>
+        <span class="hub-card-status" id="hub-status-historial" style="color:var(--txt-sec);background:var(--bg);border-color:var(--sep)">— Sin registrar</span>
       </div>
-      <div class="hub-card disabled" id="hub-card-epworth">
-        <span class="hub-card-soon">Próximamente</span>
-        <div class="hub-card-label">Realizar encuestas de EPWORTH</div>
+      <div class="hub-card" id="hub-card-epworth">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 02</div>
+        <div class="hub-card-label">Encuesta de Epworth</div>
+        <div class="hub-card-desc">Escala de somnolencia diurna — 8 preguntas, puntaje de 0 a 24</div>
+        <span class="hub-card-status" id="hub-status-epworth" style="color:var(--txt-sec);background:var(--bg);border-color:var(--sep)">— Sin registrar</span>
       </div>
       <div class="hub-card" id="hub-card-secciones">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 03</div>
         <div class="hub-card-label">Secciones realizadas</div>
+        <div class="hub-card-desc">Historial de noches de monitoreo registradas para este paciente</div>
       </div>
       <div class="hub-card disabled" id="hub-card-resumen">
-        <span class="hub-card-soon">Próximamente</span>
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 04</div>
         <div class="hub-card-label">Resumen del monitoreo</div>
+        <div class="hub-card-desc">Vista consolidada de todas las sesiones del paciente</div>
+        <span class="hub-card-soon">Próximamente</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: HISTORIAL MÉDICO
+══════════════════════════════ -->
+<div id="screen-historial" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-historial">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-historial"></span>
+      <span class="sep">›</span>
+      <span>Historial médico</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-historial">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Historial médico</h1>
+      <p>Información clínica base del paciente, usada para el cálculo de severidad de AOS</p>
+    </div>
+
+    <div class="form-card">
+      <div class="form-readonly-banner" id="historial-banner" style="display:none"></div>
+      <div class="form-card-header">
+        <h3>Datos clínicos</h3>
+      </div>
+      <div class="form-card-body" id="historial-body">
+        <div class="form-q">
+          <div class="form-q-label"><span class="form-q-num">1</span> ¿El paciente tiene alguna enfermedad cardiovascular?</div>
+          <div class="opt-row" id="hist-cardio-opts">
+            <button class="opt-btn" data-val="Si">Sí</button>
+            <button class="opt-btn" data-val="No">No</button>
+          </div>
+        </div>
+        <div class="form-q">
+          <div class="form-q-label"><span class="form-q-num">2</span> ¿Cuál es el género del paciente?</div>
+          <div class="opt-row" id="hist-sexo-opts">
+            <button class="opt-btn" data-val="F">Mujer</button>
+            <button class="opt-btn" data-val="M">Hombre</button>
+          </div>
+        </div>
+        <div class="form-q">
+          <div class="form-q-label"><span class="form-q-num">3</span> Edad</div>
+          <input type="number" class="form-input-num" id="hist-edad" min="0" max="120" placeholder="Ej. 45"/>
+          <span class="input-suffix">años</span>
+        </div>
+        <div class="form-q">
+          <div class="form-q-label"><span class="form-q-num">4</span> Talla / estatura</div>
+          <input type="number" class="form-input-num" id="hist-talla" min="0" max="250" step="0.1" placeholder="Ej. 170"/>
+          <span class="input-suffix">cm</span>
+        </div>
+        <div class="form-q">
+          <div class="form-q-label"><span class="form-q-num">5</span> Peso</div>
+          <input type="number" class="form-input-num" id="hist-peso" min="0" max="400" step="0.1" placeholder="Ej. 78"/>
+          <span class="input-suffix">kg</span>
+        </div>
+        <div class="form-q">
+          <div class="form-q-label" style="margin-bottom:0">Índice de masa corporal (IMC)</div>
+          <div class="imc-box">
+            <div>
+              <div class="imc-label">IMC calculado</div>
+              <div class="imc-value" id="hist-imc-valor">—</div>
+            </div>
+            <span class="imc-cat" id="hist-imc-cat" style="color:var(--txt-sec);border-color:var(--sep)">Ingrese talla y peso</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save-form" id="btn-guardar-historial">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Guardar historial
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: ENCUESTA EPWORTH
+══════════════════════════════ -->
+<div id="screen-epworth" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-epworth">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-epworth"></span>
+      <span class="sep">›</span>
+      <span>Encuesta de Epworth</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-epworth">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Escala de somnolencia de Epworth</h1>
+      <p>Para cada situación, indique qué tan probable es que el paciente «cabecee» o se quede dormido</p>
+    </div>
+
+    <div class="form-card" style="max-width:760px">
+      <div class="form-readonly-banner" id="epworth-banner" style="display:none"></div>
+      <div class="form-card-header">
+        <h3>Cuestionario</h3>
+      </div>
+      <div class="form-card-body" id="epworth-body">
+        <div class="epworth-scale-hint">
+          <span><b>0</b> Nunca</span>
+          <span><b>1</b> Probabilidad baja</span>
+          <span><b>2</b> Probabilidad moderada</span>
+          <span><b>3</b> Probabilidad alta</span>
+        </div>
+        <div id="epworth-questions"></div>
+        <div class="epworth-total-box" id="epworth-total-box" style="border-color:var(--sep);background:var(--bg)">
+          <div>
+            <div class="et-label" style="color:var(--txt-sec)">Puntaje total</div>
+            <div class="et-value" id="epworth-total-valor">0</div>
+          </div>
+          <div class="et-interp" id="epworth-total-interp" style="color:var(--txt-sec)">Responda las 8 preguntas para ver la interpretación</div>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save-form" id="btn-guardar-epworth">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Guardar encuesta
+        </button>
       </div>
     </div>
   </div>
@@ -856,8 +1128,9 @@ const API = "https://api-biomedica-production.up.railway.app";
 /* ─── Estado global ─── */
 let state = {
   usuario: null,
-  paciente: null,          // grupo de paciente { nombre, edad, sexo, enfermedad_cardiovascular, registros:[{id, fecha_estudio, raw}] }
-  registroActivo: null,    // registro (id + fecha) seleccionado en "Secciones realizadas"
+  paciente: null,          // objeto paciente individual { id, nombre, edad, sexo, enfermedad_cardiovascular, imc, epworth, fecha_estudio... }
+  sesiones: [],             // lista de sesiones del paciente [{id, fecha}], desde /sesiones/por-paciente/{id}
+  registroActivo: null,    // sesión seleccionada en "Secciones realizadas" -> {id, fecha}
   sesionId: null,
   horas: [],
   horaIdx: 0,
@@ -872,7 +1145,11 @@ let state = {
   respX: [], respY: [],
   ecgFs: 250,
   ecgYMin: -5, ecgYMax: 5,
-  fcCalculada: null
+  fcCalculada: null,
+  // Formularios
+  histCardio: null,   // 'Si' | 'No'
+  histSexo: null,     // 'M' | 'F'
+  epworthRespuestas: new Array(8).fill(null)
 };
 
 let chartECG = null, chartResp = null;
@@ -882,6 +1159,8 @@ const screens = {
   login:       document.getElementById('screen-login'),
   pacientes:   document.getElementById('screen-pacientes'),
   hub:         document.getElementById('screen-hub'),
+  historial:   document.getElementById('screen-historial'),
+  epworth:     document.getElementById('screen-epworth'),
   secciones:   document.getElementById('screen-secciones'),
   horas:       document.getElementById('screen-horas'),
   detalle:     document.getElementById('screen-detalle'),
@@ -1004,6 +1283,43 @@ function calcularGravedad(n, epworth, imc, cv) {
   return { texto:'AOS Muy Grave', cls:'sev-muy-grave' };
 }
 
+/* ─── IMC helpers ─── */
+function calcularIMC(pesoKg, tallaCm) {
+  if (!pesoKg || !tallaCm) return null;
+  const tallaM = tallaCm / 100;
+  if (tallaM <= 0) return null;
+  const imc = pesoKg / (tallaM * tallaM);
+  if (!isFinite(imc) || imc <= 0) return null;
+  return Math.round(imc * 10) / 10;
+}
+function categoriaIMC(imc) {
+  if (imc == null) return { texto:'Ingrese talla y peso', color:'var(--txt-sec)', border:'var(--sep)' };
+  if (imc < 18.5)  return { texto:'Bajo peso', color:'#2A6496', border:'#7AAFC5' };
+  if (imc < 25)    return { texto:'Normal', color:'var(--ok)', border:'#A8DFBE' };
+  if (imc < 30)    return { texto:'Sobrepeso', color:'var(--warn)', border:'#F5CC84' };
+  if (imc < 35)    return { texto:'Obesidad I', color:'#C06020', border:'#F5AA70' };
+  if (imc < 40)    return { texto:'Obesidad II', color:'#C04020', border:'#F0A090' };
+  return { texto:'Obesidad III', color:'var(--crit)', border:'#F0A0A0' };
+}
+
+/* ─── Epworth helpers ─── */
+const EPWORTH_PREGUNTAS = [
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">sentado y leyendo</span>?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">mirando la TV</span>?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">sentado inactivo en un lugar público</span> (conferencia, teatro, sala de espera, cine, reunión social, misa, etc.)?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">como pasajero en un auto, micro, combi u ómnibus durante 1 hora sin descanso</span>?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">acostado para descansar por la tarde</span> cuando las circunstancias se lo permiten?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">sentado y hablando con alguien</span>?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">sentado tranquilamente después de una comida sin alcohol</span>?',
+  '¿Qué tan probable es que «cabecee» o se quede dormido <span class="epworth-q-bold">en un auto, cuando se detiene por unos minutos por razones de tráfico</span>?'
+];
+function interpretarEpworth(total) {
+  if (total <= 9)  return { texto:'Nivel normal de somnolencia diurna.', color:'var(--ok)', border:'#A8DFBE', bg:'#F0FFF5' };
+  if (total <= 12) return { texto:'Somnolencia leve; posible trastorno del sueño que requiere monitoreo.', color:'var(--warn)', border:'#F5CC84', bg:'#FFF8ED' };
+  if (total <= 15) return { texto:'Somnolencia moderada; se recomienda evaluación médica especializada.', color:'#C06020', border:'#F5AA70', bg:'#FFF3E0' };
+  return { texto:'Somnolencia severa; alto riesgo de trastornos del sueño (AOS, narcolepsia). Requiere atención urgente.', color:'var(--crit)', border:'#F0A0A0', bg:'#FFF0F0' };
+}
+
 /* ─── Login ─── */
 document.getElementById('btn-login').addEventListener('click', doLogin);
 document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
@@ -1043,7 +1359,7 @@ async function doLogin() {
 }
 
 /* ─── Logout ─── */
-['btn-logout','btn-logout-hub','btn-logout-secciones','btn-logout-2','btn-logout-3','btn-logout-4'].forEach(id => {
+['btn-logout','btn-logout-hub','btn-logout-historial','btn-logout-epworth','btn-logout-secciones','btn-logout-2','btn-logout-3','btn-logout-4'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('click', () => {
     state = { ...state, usuario:null, paciente:null };
@@ -1061,39 +1377,6 @@ document.getElementById('inp-buscar').addEventListener('input', () => {
 });
 document.getElementById('btn-refresh').addEventListener('click', cargarPacientes);
 
-/* Agrupa registros (uno por sesión/noche) por nombre de paciente.
-   Esto permite mostrar varias fechas de estudio para el mismo paciente
-   y listar todas sus "secciones realizadas" (noches de monitoreo). */
-function agruparPacientesPorNombre(datos) {
-  const grupos = new Map();
-  datos.forEach(p => {
-    const clave = (p.nombre||'--').trim().toLowerCase();
-    if (!grupos.has(clave)) {
-      grupos.set(clave, {
-        nombre: p.nombre,
-        edad: p.edad,
-        sexo: p.sexo,
-        enfermedad_cardiovascular: p.enfermedad_cardiovascular,
-        imc: p.imc,
-        epworth: p.epworth,
-        registros: []
-      });
-    }
-    const g = grupos.get(clave);
-    g.registros.push({ id: p.id, fecha_estudio: p.fecha_estudio, raw: p });
-    // Usar los datos más recientes (por fecha) para edad/sexo/etc.
-    if (!g._fechaRef || (p.fecha_estudio && p.fecha_estudio > g._fechaRef)) {
-      g._fechaRef = p.fecha_estudio;
-      g.edad = p.edad; g.sexo = p.sexo;
-      g.enfermedad_cardiovascular = p.enfermedad_cardiovascular;
-      g.imc = p.imc; g.epworth = p.epworth;
-    }
-  });
-  // Ordenar registros de cada grupo por fecha descendente
-  grupos.forEach(g => g.registros.sort((a,b) => (b.fecha_estudio||'').localeCompare(a.fecha_estudio||'')));
-  return Array.from(grupos.values());
-}
-
 async function cargarPacientes() {
   const filtro = document.getElementById('inp-buscar').value.trim();
   const tbody = document.getElementById('tbl-pacientes-body');
@@ -1106,99 +1389,359 @@ async function cargarPacientes() {
     return;
   }
 
-  const grupos = agruparPacientesPorNombre(datos);
-
-  tbody.innerHTML = grupos.map((g,gi) => {
-    const MAX_VISIBLE = 3;
-    const fechasVisibles = g.registros.slice(0, MAX_VISIBLE).map(r => r.fecha_estudio||'--');
-    const restantes = g.registros.length - MAX_VISIBLE;
-    const chips = fechasVisibles.map(f => `<span class="fecha-chip">${f}</span>`).join('')
-      + (restantes > 0 ? `<span class="fecha-chip more">+${restantes}</span>` : '');
-    return `
-      <tr data-gidx="${gi}">
-        <td><strong>${g.nombre||'--'}</strong></td>
-        <td><div class="fecha-chips">${chips}</div></td>
-        <td class="sec">${g.edad||'--'}</td>
-        <td><span class="badge badge-${(g.sexo||'').toLowerCase()==='f'?'f':'m'}">${g.sexo||'--'}</span></td>
-        <td class="sec">${g.enfermedad_cardiovascular||'--'}</td>
+  // Cada fila de /pacientes es un paciente único con su propio id.
+  // Las múltiples sesiones/noches de monitoreo de un mismo paciente se
+  // consultan por separado vía /sesiones/por-paciente/{id} al abrir "Secciones realizadas".
+  tbody.innerHTML = datos.map((p,i) => `
+      <tr data-pidx="${i}">
+        <td><strong>${p.nombre||'--'}</strong></td>
+        <td class="sec">${p.fecha_estudio||'--'}</td>
+        <td class="sec">${p.edad||'--'}</td>
+        <td><span class="badge badge-${(p.sexo||'').toLowerCase()==='f'?'f':'m'}">${p.sexo||'--'}</span></td>
+        <td class="sec">${p.enfermedad_cardiovascular||'--'}</td>
       </tr>
-    `;
-  }).join('');
+    `).join('');
 
   tbody.querySelectorAll('tr').forEach(tr => {
-    tr.addEventListener('click', () => abrirPaciente(grupos[parseInt(tr.dataset.gidx)]));
+    tr.addEventListener('click', () => abrirPaciente(datos[parseInt(tr.dataset.pidx)]));
   });
 }
 
 /* ─── Hub de paciente ─── */
 document.getElementById('btn-back-hub').addEventListener('click', () => show('pacientes'));
 document.getElementById('hub-card-secciones').addEventListener('click', () => abrirSecciones());
-['hub-card-historial','hub-card-epworth','hub-card-resumen'].forEach(id => {
-  document.getElementById(id).addEventListener('click', () => toast('Este apartado estará disponible próximamente'));
-});
+document.getElementById('hub-card-historial').addEventListener('click', () => abrirHistorial());
+document.getElementById('hub-card-epworth').addEventListener('click', () => abrirEpworth());
+document.getElementById('hub-card-resumen').addEventListener('click', () => toast('Este apartado estará disponible próximamente'));
 
-async function abrirPaciente(grupo) {
-  state.paciente = grupo;
-  document.getElementById('breadcrumb-paciente-hub').textContent = grupo.nombre;
-  document.getElementById('hub-title').textContent = grupo.nombre;
+async function abrirPaciente(paciente) {
+  state.paciente = paciente;
+  document.getElementById('breadcrumb-paciente-hub').textContent = paciente.nombre;
+  document.getElementById('hub-title').textContent = paciente.nombre;
+  actualizarEstadosHub();
   show('hub');
 }
+
+function actualizarEstadosHub() {
+  const pac = state.paciente;
+  const elH = document.getElementById('hub-status-historial');
+  const elE = document.getElementById('hub-status-epworth');
+  const tieneHistorial = pac && (pac.edad != null || pac.sexo || pac.imc != null || pac.enfermedad_cardiovascular);
+  if (tieneHistorial) {
+    elH.textContent = '✓ Registrado';
+    elH.style.color = 'var(--ok)'; elH.style.background = '#F0FFF5'; elH.style.borderColor = '#A8DFBE';
+  } else {
+    elH.textContent = '— Sin registrar';
+    elH.style.color = 'var(--txt-sec)'; elH.style.background = 'var(--bg)'; elH.style.borderColor = 'var(--sep)';
+  }
+  const tieneEpworth = pac && pac.epworth != null;
+  if (tieneEpworth) {
+    elE.textContent = `✓ Puntaje ${pac.epworth}`;
+    elE.style.color = 'var(--ok)'; elE.style.background = '#F0FFF5'; elE.style.borderColor = '#A8DFBE';
+  } else {
+    elE.textContent = '— Sin registrar';
+    elE.style.color = 'var(--txt-sec)'; elE.style.background = 'var(--bg)'; elE.style.borderColor = 'var(--sep)';
+  }
+}
+
+/* ─── Helper: guardar datos del paciente vía PUT /pacientes/{id} ─── */
+async function guardarPaciente(camposNuevos) {
+  const pac = state.paciente;
+  const body = {
+    nombre: pac.nombre,
+    fecha_estudio: pac.fecha_estudio || null,
+    edad: pac.edad != null ? pac.edad : null,
+    sexo: pac.sexo || null,
+    enfermedad_cardiovascular: pac.enfermedad_cardiovascular || null,
+    imc: pac.imc != null ? pac.imc : null,
+    epworth: pac.epworth != null ? pac.epworth : null,
+    ...camposNuevos
+  };
+  try {
+    const res = await fetch(`${API}/pacientes/${pac.id}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if (res.ok) {
+      Object.assign(state.paciente, body);
+      return true;
+    }
+    return false;
+  } catch(e) {
+    console.error(e);
+    return false;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   HISTORIAL MÉDICO
+════════════════════════════════════════════════════════════ */
+document.getElementById('btn-back-historial').addEventListener('click', () => show('hub'));
+
+let historialModoEdicion = false;
+
+function abrirHistorial() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-historial').textContent = pac.nombre;
+  show('historial');
+
+  // Cargar valores existentes
+  state.histCardio = pac.enfermedad_cardiovascular === 'Si' ? 'Si' : (pac.enfermedad_cardiovascular === 'No' ? 'No' : null);
+  state.histSexo = (pac.sexo === 'M' || pac.sexo === 'F') ? pac.sexo : null;
+  document.getElementById('hist-edad').value = pac.edad != null ? pac.edad : '';
+  // No se guarda la talla directamente en la BD (solo el IMC resultante); si ya hay un IMC previo,
+  // dejamos los campos de talla/peso vacíos para que el usuario los reingrese si quiere recalcular.
+  document.getElementById('hist-talla').value = '';
+  document.getElementById('hist-peso').value = '';
+
+  pintarOpciones('hist-cardio-opts', state.histCardio);
+  pintarOpciones('hist-sexo-opts', state.histSexo);
+  actualizarIMCPreview();
+
+  const tieneAlgo = pac.edad != null || pac.sexo || pac.enfermedad_cardiovascular || pac.imc != null;
+  const banner = document.getElementById('historial-banner');
+  if (tieneAlgo) {
+    banner.style.display = 'flex';
+    banner.classList.remove('is-empty');
+    banner.innerHTML = `<span>Este paciente ya tiene historial médico registrado.</span>`;
+  } else {
+    banner.style.display = 'flex';
+    banner.classList.add('is-empty');
+    banner.innerHTML = `<span>Aún no hay historial médico registrado para este paciente. Complete el formulario y guarde.</span>`;
+  }
+
+  if (pac.imc != null) {
+    document.getElementById('hist-imc-valor').textContent = pac.imc;
+    const cat = categoriaIMC(pac.imc);
+    const catEl = document.getElementById('hist-imc-cat');
+    catEl.textContent = cat.texto;
+    catEl.style.color = cat.color;
+    catEl.style.borderColor = cat.border;
+  }
+}
+
+function pintarOpciones(contId, valorActivo) {
+  document.querySelectorAll(`#${contId} .opt-btn`).forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.val === valorActivo);
+  });
+}
+
+document.getElementById('hist-cardio-opts').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn');
+  if (!btn) return;
+  state.histCardio = btn.dataset.val;
+  pintarOpciones('hist-cardio-opts', state.histCardio);
+});
+document.getElementById('hist-sexo-opts').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn');
+  if (!btn) return;
+  state.histSexo = btn.dataset.val;
+  pintarOpciones('hist-sexo-opts', state.histSexo);
+});
+
+function actualizarIMCPreview() {
+  const talla = parseFloat(document.getElementById('hist-talla').value);
+  const peso = parseFloat(document.getElementById('hist-peso').value);
+  const imc = calcularIMC(peso, talla);
+  const valorEl = document.getElementById('hist-imc-valor');
+  const catEl = document.getElementById('hist-imc-cat');
+  const cat = categoriaIMC(imc);
+  valorEl.textContent = imc != null ? imc : '—';
+  catEl.textContent = cat.texto;
+  catEl.style.color = cat.color;
+  catEl.style.borderColor = cat.border;
+}
+['hist-talla','hist-peso'].forEach(id => {
+  document.getElementById(id).addEventListener('input', actualizarIMCPreview);
+});
+
+document.getElementById('btn-guardar-historial').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-guardar-historial');
+  const edadVal = document.getElementById('hist-edad').value;
+  const tallaVal = parseFloat(document.getElementById('hist-talla').value);
+  const pesoVal = parseFloat(document.getElementById('hist-peso').value);
+
+  if (!state.histCardio) { toast('Seleccione si el paciente tiene enfermedad cardiovascular', 'err'); return; }
+  if (!state.histSexo)   { toast('Seleccione el género del paciente', 'err'); return; }
+  if (!edadVal)           { toast('Ingrese la edad del paciente', 'err'); return; }
+
+  let imcCalculado = state.paciente.imc != null ? state.paciente.imc : null;
+  if (tallaVal && pesoVal) {
+    imcCalculado = calcularIMC(pesoVal, tallaVal);
+  } else if ((tallaVal && !pesoVal) || (!tallaVal && pesoVal)) {
+    toast('Ingrese tanto la talla como el peso para calcular el IMC', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  const ok = await guardarPaciente({
+    enfermedad_cardiovascular: state.histCardio,
+    sexo: state.histSexo,
+    edad: parseInt(edadVal),
+    imc: imcCalculado
+  });
+  btn.disabled = false;
+
+  if (ok) {
+    toast('Historial médico guardado', 'ok');
+    actualizarEstadosHub();
+    abrirHistorial(); // refrescar banner y valores
+  } else {
+    toast('Error al guardar el historial', 'err');
+  }
+});
+
+/* ════════════════════════════════════════════════════════════
+   ENCUESTA DE EPWORTH
+════════════════════════════════════════════════════════════ */
+document.getElementById('btn-back-epworth').addEventListener('click', () => show('hub'));
+
+function abrirEpworth() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-epworth').textContent = pac.nombre;
+  show('epworth');
+
+  state.epworthRespuestas = new Array(8).fill(null);
+
+  const cont = document.getElementById('epworth-questions');
+  cont.innerHTML = EPWORTH_PREGUNTAS.map((texto, i) => `
+    <div class="epworth-q">
+      <div class="epworth-q-text"><strong>${i+1}.</strong> ${texto}</div>
+      <select class="epworth-select" id="epworth-sel-${i}" data-idx="${i}">
+        <option value="">— Seleccionar —</option>
+        <option value="0">0 — Nunca</option>
+        <option value="1">1 — Probabilidad baja</option>
+        <option value="2">2 — Probabilidad moderada</option>
+        <option value="3">3 — Probabilidad alta</option>
+      </select>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('.epworth-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const idx = parseInt(sel.dataset.idx);
+      state.epworthRespuestas[idx] = sel.value === '' ? null : parseInt(sel.value);
+      actualizarTotalEpworth();
+    });
+  });
+
+  const banner = document.getElementById('epworth-banner');
+  if (pac.epworth != null) {
+    banner.style.display = 'flex';
+    banner.classList.remove('is-empty');
+    banner.innerHTML = `<span>Puntaje guardado previamente: <strong>${pac.epworth}</strong> — al completar y guardar de nuevo se reemplazará.</span>`;
+  } else {
+    banner.style.display = 'flex';
+    banner.classList.add('is-empty');
+    banner.innerHTML = `<span>Esta encuesta aún no se ha realizado para este paciente.</span>`;
+  }
+
+  actualizarTotalEpworth();
+}
+
+function actualizarTotalEpworth() {
+  const respuestas = state.epworthRespuestas;
+  const respondidas = respuestas.filter(v => v != null);
+  const total = respondidas.reduce((a,b) => a+b, 0);
+  const box = document.getElementById('epworth-total-box');
+  const valorEl = document.getElementById('epworth-total-valor');
+  const interpEl = document.getElementById('epworth-total-interp');
+
+  valorEl.textContent = total;
+
+  if (respondidas.length < 8) {
+    box.style.borderColor = 'var(--sep)';
+    box.style.background = 'var(--bg)';
+    interpEl.style.color = 'var(--txt-sec)';
+    interpEl.textContent = `Responda las ${8 - respondidas.length} pregunta(s) restante(s) para ver la interpretación`;
+    return;
+  }
+
+  const interp = interpretarEpworth(total);
+  box.style.borderColor = interp.border;
+  box.style.background = interp.bg;
+  interpEl.style.color = interp.color;
+  interpEl.textContent = interp.texto;
+}
+
+document.getElementById('btn-guardar-epworth').addEventListener('click', async () => {
+  const respuestas = state.epworthRespuestas;
+  if (respuestas.some(v => v == null)) {
+    toast('Responda las 8 preguntas antes de guardar', 'err');
+    return;
+  }
+  const total = respuestas.reduce((a,b) => a+b, 0);
+  const btn = document.getElementById('btn-guardar-epworth');
+  btn.disabled = true;
+  const ok = await guardarPaciente({ epworth: total });
+  btn.disabled = false;
+  if (ok) {
+    toast(`Encuesta guardada — puntaje total: ${total}`, 'ok');
+    actualizarEstadosHub();
+    abrirEpworth(); // refrescar banner
+  } else {
+    toast('Error al guardar la encuesta', 'err');
+  }
+});
 
 /* ─── Secciones realizadas (noches de monitoreo) ─── */
 document.getElementById('btn-back-secciones').addEventListener('click', () => show('hub'));
 
-function abrirSecciones() {
+async function abrirSecciones() {
   const pac = state.paciente;
   document.getElementById('breadcrumb-paciente-secciones').textContent = pac.nombre;
   show('secciones');
 
   const grid = document.getElementById('secciones-grid');
-  if (!pac.registros.length) {
+  grid.innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
+
+  // Bug corregido: se usa /sesiones/por-paciente/{id} (PLURAL) que devuelve TODAS
+  // las sesiones del paciente, en vez de /sesion/por-paciente/{id} (singular) que
+  // solo devolvía la más reciente.
+  const sesiones = await api(`/sesiones/por-paciente/${pac.id}`);
+  state.sesiones = sesiones || [];
+
+  if (!state.sesiones.length) {
     grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesiones registradas para este paciente</div>';
     return;
   }
-  grid.innerHTML = pac.registros.map((r,i) => `
-    <div class="seccion-card" data-ridx="${i}">
-      <div class="seccion-card-label">Sección ${i+1}</div>
-      <div class="seccion-card-fecha">${r.fecha_estudio||'--'}</div>
-      <div class="seccion-card-sub">Noche de monitoreo</div>
-    </div>
-  `).join('');
+
+  // Ordenar más reciente primero
+  state.sesiones.sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+
+  grid.innerHTML = state.sesiones.map((s,i) => {
+    const fechaFmt = (s.fecha||'--').slice(0,16).replace('T',' ');
+    return `
+      <div class="seccion-card" data-sidx="${i}">
+        <div class="seccion-card-label">Sesión #${s.id}</div>
+        <div class="seccion-card-fecha">${fechaFmt}</div>
+        <div class="seccion-card-sub">Noche de monitoreo</div>
+      </div>
+    `;
+  }).join('');
+
   grid.querySelectorAll('.seccion-card').forEach(card => {
     card.addEventListener('click', () => {
-      const r = pac.registros[parseInt(card.dataset.ridx)];
-      abrirSesionEspecifica(r);
+      const s = state.sesiones[parseInt(card.dataset.sidx)];
+      abrirSesionEspecifica(s);
     });
   });
 }
 
-async function abrirSesionEspecifica(registro) {
-  state.registroActivo = registro;
+async function abrirSesionEspecifica(sesion) {
+  state.registroActivo = sesion;
   const pac = state.paciente;
-  document.getElementById('breadcrumb-paciente').textContent = `${pac.nombre} (${registro.fecha_estudio||'--'})`;
+  const fechaFmt = (sesion.fecha||'--').slice(0,16).replace('T',' ');
+  document.getElementById('breadcrumb-paciente').textContent = `${pac.nombre} (${fechaFmt})`;
   document.getElementById('horas-title').textContent = pac.nombre;
 
   show('horas');
   document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
   document.getElementById('summary-bar').innerHTML = '';
 
-  // Obtener sesión usando el id del registro seleccionado
-  let sesId = null;
-  const id = registro.id;
-  const res1 = await api(`/sesion/por-paciente/${id}`);
-  if (res1?.sesion_id) sesId = res1.sesion_id;
-  if (!sesId) {
-    const nombre = encodeURIComponent(pac.nombre);
-    const res2 = await api(`/sesion/por-nombre/${nombre}`);
-    if (res2?.sesion_id) sesId = res2.sesion_id;
-  }
-  state.sesionId = sesId;
-
-  if (!sesId) {
-    document.getElementById('horas-grid').innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesión registrada para esta noche</div>';
-    return;
-  }
-  cargarHoras(sesId);
+  state.sesionId = sesion.id;
+  cargarHoras(sesion.id);
 }
 
 document.getElementById('btn-back-horas').addEventListener('click', () => abrirSecciones());
@@ -1843,7 +2386,7 @@ async function generarPDFSesion() {
   y += 8;
   const fields = [
     ['Nombre', pac.nombre||'--'], ['Edad', pac.edad||'--'],
-    ['Sexo', pac.sexo||'--'], ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha_estudio)||'--'],
+    ['Sexo', pac.sexo||'--'], ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha)||pac.fecha_estudio||'--'],
     ['IMC', pac.imc||'--'], ['Epworth', pac.epworth||'--'],
     ['Enf. cardiovascular', pac.enfermedad_cardiovascular||'--']
   ];
@@ -2060,7 +2603,7 @@ async function generarPDF() {
 
   const campos = [
     ['Nombre',           pac.nombre || '--'],
-    ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha_estudio) || '--'],
+    ['Fecha de estudio', (state.registroActivo&&state.registroActivo.fecha) || pac.fecha_estudio || '--'],
     ['Edad',             pac.edad ? `${pac.edad} años` : '--'],
     ['Sexo',             pac.sexo || '--'],
     ['IMC',              pac.imc ? `${pac.imc} kg/m²` : '--'],
