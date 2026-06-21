@@ -377,11 +377,16 @@ tbody td.sec{color:var(--txt-sec)}
 /* ═══════════════════════════════════════════════════════
    FORMULARIOS (Historial médico / Epworth)
 ═══════════════════════════════════════════════════════ */
+.historial-cols{
+  display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;
+  max-width:1320px
+}
 .form-card{
   background:var(--white);border-radius:var(--radius-md);
   border:1px solid var(--sep);box-shadow:var(--shadow-sm);
   max-width:640px;overflow:hidden
 }
+.historial-cols .form-card{max-width:100%}
 .form-card-header{
   padding:16px 24px;background:var(--accent-xl);
   border-bottom:1px solid var(--accent-lt);
@@ -461,6 +466,8 @@ tbody td.sec{color:var(--txt-sec)}
 .epworth-q:last-of-type{border-bottom:none}
 .epworth-q-text{font-size:13.5px;color:var(--txt-pri);line-height:1.5}
 .epworth-q-text .epworth-q-bold{font-weight:600}
+.historial-cols .epworth-q{grid-template-columns:1fr;gap:8px}
+.historial-cols .epworth-select{max-width:220px}
 .epworth-select{
   width:100%;padding:9px 12px;
   border:1.5px solid var(--sep);border-radius:var(--radius-sm);
@@ -481,6 +488,66 @@ tbody td.sec{color:var(--txt-sec)}
   margin-bottom:18px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm)
 }
 .epworth-scale-hint b{color:var(--txt-pri)}
+
+/* ═══════════════════════════════════════════════════════
+   RESUMEN DEL MONITOREO — EVENTOS CONFIRMADOS POR APNEA
+═══════════════════════════════════════════════════════ */
+.criterio-box{
+  background:var(--accent-xl);border:1.5px solid var(--accent-lt);
+  border-radius:var(--radius-md);padding:16px 18px;margin-bottom:20px
+}
+.criterio-box-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:700;color:var(--accent);
+  text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px
+}
+.criterio-box-body{font-size:13px;color:var(--txt-pri);line-height:1.6}
+.criterio-box-body strong{color:var(--accent-hv)}
+
+.eventos-selector-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:16px
+}
+
+.eventos-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.eventos-col-card{
+  background:var(--white);border-radius:var(--radius-md);
+  border:1.5px solid var(--sep);overflow:hidden;box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;max-height:420px
+}
+.eventos-col-card.eventos-col-ok{border-color:#A8DFBE}
+.eventos-col-card.eventos-col-bad{border-color:#F0A0A0}
+.eventos-col-header{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;font-size:12.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:0.04em;flex-shrink:0
+}
+.eventos-col-ok .eventos-col-header{background:#F0FFF5;color:var(--ok);border-bottom:1px solid #C8EDD8}
+.eventos-col-bad .eventos-col-header{background:#FFF0F0;color:var(--crit);border-bottom:1px solid #F0C8C8}
+.eventos-col-count{
+  margin-left:auto;background:white;border-radius:20px;
+  padding:2px 10px;font-size:12px;font-weight:700;border:1px solid currentColor
+}
+.eventos-col-list{flex:1;overflow-y:auto;padding:8px}
+.eventos-item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:9px 12px;border-radius:var(--radius-sm);
+  font-size:12.5px;color:var(--txt-pri);margin-bottom:6px;background:var(--bg)
+}
+.eventos-item .ei-meta{color:var(--txt-sec);font-size:11.5px}
+.eventos-empty{padding:24px;text-align:center;color:var(--txt-sec);font-size:12.5px}
+
+.resultado-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid currentColor
+}
+.resultado-chip.ok{color:var(--ok);background:#F0FFF5;border-color:#A8DFBE}
+.resultado-chip.bad{color:var(--crit);background:#FFF0F0;border-color:#F0A0A0}
+
+@media(max-width:900px){
+  .eventos-cols{grid-template-columns:1fr}
+}
 
 /* ═══════════════════════════════════════════════════════
    DETALLE HORA
@@ -639,6 +706,7 @@ tbody td.sec{color:var(--txt-sec)}
   .summary-bar{grid-template-columns:repeat(2,1fr)}
   .interr-sidebar{width:260px}
   .epworth-q{grid-template-columns:1fr}
+  .historial-cols{grid-template-columns:1fr}
 }
 @media(max-width:650px){
   .page-content{padding:16px}
@@ -789,14 +857,13 @@ tbody td.sec{color:var(--txt-sec)}
         <div class="hub-card-label">Secciones realizadas</div>
         <div class="hub-card-desc">Historial de noches de monitoreo registradas para este paciente</div>
       </div>
-      <div class="hub-card disabled" id="hub-card-resumen">
+      <div class="hub-card" id="hub-card-resumen">
         <div class="hub-card-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
         </div>
         <div class="hub-card-num">Apartado 04</div>
         <div class="hub-card-label">Resumen del monitoreo</div>
         <div class="hub-card-desc">Vista consolidada de todas las sesiones del paciente</div>
-        <span class="hub-card-soon">Próximamente</span>
       </div>
     </div>
   </div>
@@ -825,57 +892,89 @@ tbody td.sec{color:var(--txt-sec)}
       <p>Información clínica base del paciente, usada para el cálculo de severidad de AOS</p>
     </div>
 
-    <div class="form-card">
-      <div class="form-readonly-banner" id="historial-banner" style="display:none"></div>
-      <div class="form-card-header">
-        <h3>Datos clínicos</h3>
-      </div>
-      <div class="form-card-body" id="historial-body">
-        <div class="form-q">
-          <div class="form-q-label"><span class="form-q-num">1</span> ¿El paciente tiene alguna enfermedad cardiovascular?</div>
-          <div class="opt-row" id="hist-cardio-opts">
-            <button class="opt-btn" data-val="Si">Sí</button>
-            <button class="opt-btn" data-val="No">No</button>
-          </div>
+    <div class="historial-cols">
+      <div class="form-card">
+        <div class="form-readonly-banner" id="historial-banner" style="display:none"></div>
+        <div class="form-card-header">
+          <h3>Datos clínicos</h3>
         </div>
-        <div class="form-q">
-          <div class="form-q-label"><span class="form-q-num">2</span> ¿Cuál es el género del paciente?</div>
-          <div class="opt-row" id="hist-sexo-opts">
-            <button class="opt-btn" data-val="F">Mujer</button>
-            <button class="opt-btn" data-val="M">Hombre</button>
-          </div>
-        </div>
-        <div class="form-q">
-          <div class="form-q-label"><span class="form-q-num">3</span> Edad</div>
-          <input type="number" class="form-input-num" id="hist-edad" min="0" max="120" placeholder="Ej. 45"/>
-          <span class="input-suffix">años</span>
-        </div>
-        <div class="form-q">
-          <div class="form-q-label"><span class="form-q-num">4</span> Talla / estatura</div>
-          <input type="number" class="form-input-num" id="hist-talla" min="0" max="250" step="0.1" placeholder="Ej. 170"/>
-          <span class="input-suffix">cm</span>
-        </div>
-        <div class="form-q">
-          <div class="form-q-label"><span class="form-q-num">5</span> Peso</div>
-          <input type="number" class="form-input-num" id="hist-peso" min="0" max="400" step="0.1" placeholder="Ej. 78"/>
-          <span class="input-suffix">kg</span>
-        </div>
-        <div class="form-q">
-          <div class="form-q-label" style="margin-bottom:0">Índice de masa corporal (IMC)</div>
-          <div class="imc-box">
-            <div>
-              <div class="imc-label">IMC calculado</div>
-              <div class="imc-value" id="hist-imc-valor">—</div>
+        <div class="form-card-body" id="historial-body">
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">1</span> ¿El paciente tiene alguna enfermedad cardiovascular?</div>
+            <div class="opt-row" id="hist-cardio-opts">
+              <button class="opt-btn" data-val="Si">Sí</button>
+              <button class="opt-btn" data-val="No">No</button>
             </div>
-            <span class="imc-cat" id="hist-imc-cat" style="color:var(--txt-sec);border-color:var(--sep)">Ingrese talla y peso</span>
+          </div>
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">2</span> ¿Cuál es el género del paciente?</div>
+            <div class="opt-row" id="hist-sexo-opts">
+              <button class="opt-btn" data-val="F">Mujer</button>
+              <button class="opt-btn" data-val="M">Hombre</button>
+            </div>
+          </div>
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">3</span> Edad</div>
+            <input type="number" class="form-input-num" id="hist-edad" min="0" max="120" placeholder="Ej. 45"/>
+            <span class="input-suffix">años</span>
+          </div>
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">4</span> Talla / estatura</div>
+            <input type="number" class="form-input-num" id="hist-talla" min="0" max="250" step="0.1" placeholder="Ej. 170"/>
+            <span class="input-suffix">cm</span>
+          </div>
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">5</span> Peso</div>
+            <input type="number" class="form-input-num" id="hist-peso" min="0" max="400" step="0.1" placeholder="Ej. 78"/>
+            <span class="input-suffix">kg</span>
+          </div>
+          <div class="form-q">
+            <div class="form-q-label" style="margin-bottom:0">Índice de masa corporal (IMC)</div>
+            <div class="imc-box">
+              <div>
+                <div class="imc-label">IMC calculado</div>
+                <div class="imc-value" id="hist-imc-valor">—</div>
+              </div>
+              <span class="imc-cat" id="hist-imc-cat" style="color:var(--txt-sec);border-color:var(--sep)">Ingrese talla y peso</span>
+            </div>
           </div>
         </div>
+        <div class="form-actions">
+          <button class="btn-save-form" id="btn-guardar-historial">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Guardar historial
+          </button>
+        </div>
       </div>
-      <div class="form-actions">
-        <button class="btn-save-form" id="btn-guardar-historial">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Guardar historial
-        </button>
+
+      <!-- ── Estimación de escala Epworth (lado a lado con datos clínicos) ── -->
+      <div class="form-card">
+        <div class="form-readonly-banner" id="historial-epworth-banner" style="display:none"></div>
+        <div class="form-card-header">
+          <h3>Estimación de escala Epworth</h3>
+        </div>
+        <div class="form-card-body" id="historial-epworth-body">
+          <div class="epworth-scale-hint">
+            <span><b>0</b> Nunca</span>
+            <span><b>1</b> Baja</span>
+            <span><b>2</b> Moderada</span>
+            <span><b>3</b> Alta</span>
+          </div>
+          <div id="historial-epworth-questions"></div>
+          <div class="epworth-total-box" id="historial-epworth-total-box" style="border-color:var(--sep);background:var(--bg)">
+            <div>
+              <div class="et-label" style="color:var(--txt-sec)">Puntaje total</div>
+              <div class="et-value" id="historial-epworth-total-valor">0</div>
+            </div>
+            <div class="et-interp" id="historial-epworth-total-interp" style="color:var(--txt-sec)">Responda las 8 preguntas</div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save-form" id="btn-guardar-historial-epworth">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Guardar Epworth
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -930,6 +1029,216 @@ tbody td.sec{color:var(--txt-sec)}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Guardar encuesta
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: RESUMEN DEL MONITOREO (hub de 3 apartados)
+══════════════════════════════ -->
+<div id="screen-resumen" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-resumen">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-resumen"></span>
+      <span class="sep">›</span>
+      <span>Resumen del monitoreo</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-resumen">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Resumen del monitoreo</h1>
+      <p>Seleccione un apartado para ver el resumen consolidado de este paciente</p>
+    </div>
+    <div class="hub-grid">
+      <div class="hub-card" id="hub-card-resumen-general">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 01</div>
+        <div class="hub-card-label">Resumen del monitoreo</div>
+        <div class="hub-card-desc">Vista consolidada de horas, apneas e IAH de todas las sesiones</div>
+      </div>
+      <div class="hub-card" id="hub-card-eventos-confirmados">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 02</div>
+        <div class="hub-card-label">Eventos confirmados por apnea</div>
+        <div class="hub-card-desc">Validación clínica: apneas que cumplen criterio vs. eventos falsos</div>
+      </div>
+      <div class="hub-card" id="hub-card-seguimiento-apneas">
+        <div class="hub-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="hub-card-num">Apartado 03</div>
+        <div class="hub-card-label">Seguimiento de las apneas</div>
+        <div class="hub-card-desc">Evolución de eventos confirmados a lo largo de las sesiones</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: RESUMEN GENERAL (apartado 01 del resumen)
+══════════════════════════════ -->
+<div id="screen-resumen-general" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-resumen-general">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-resumen-general"></span>
+      <span class="sep">›</span>
+      <span>Resumen del monitoreo</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-resumen-general">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Resumen consolidado</h1>
+      <p>Totales de todas las sesiones de monitoreo registradas para este paciente</p>
+    </div>
+    <div class="summary-bar" id="resumen-general-summary-bar"></div>
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sesión</th>
+              <th>Fecha</th>
+              <th>Horas</th>
+              <th>Apneas totales</th>
+              <th>IAH</th>
+              <th>Tipo predominante</th>
+            </tr>
+          </thead>
+          <tbody id="resumen-general-tbody">
+            <tr><td colspan="6"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: EVENTOS CONFIRMADOS POR APNEA (apartado 02 del resumen)
+══════════════════════════════ -->
+<div id="screen-eventos-confirmados" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-eventos-confirmados">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-eventos"></span>
+      <span class="sep">›</span>
+      <span>Eventos confirmados por apnea</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-eventos">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Eventos confirmados por hora</h1>
+      <p>Seleccione una noche de monitoreo para ver el resumen por hora</p>
+    </div>
+
+    <div class="criterio-box">
+      <div class="criterio-box-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Criterio clínico de verificación (AASM)
+      </div>
+      <div class="criterio-box-body">
+        Un evento se clasifica como <strong>apnea confirmada</strong> cuando cumple ambos requisitos a la vez:
+        duración del cese respiratorio <strong>≥ 10 segundos</strong> y caída de saturación de oxígeno
+        <strong>≥ 3%</strong> respecto a una línea base de referencia de <strong>96% SpO₂</strong> (es decir, SpO₂ ≤ 93%).
+        Los eventos que no cumplen ambos criterios se marcan como <strong>no confirmados</strong> y pueden corresponder a artefactos
+        del sensor o variaciones fisiológicas normales.
+      </div>
+    </div>
+
+    <div class="eventos-selector-grid" id="eventos-selector-grid">
+      <div style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+
+    <div id="eventos-resultado-wrap" style="display:none;margin-top:24px">
+      <div class="eventos-cols">
+        <div class="eventos-col-card eventos-col-ok">
+          <div class="eventos-col-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Eventos que sí cumplen el criterio
+            <span class="eventos-col-count" id="eventos-count-ok">0</span>
+          </div>
+          <div class="eventos-col-list" id="eventos-list-ok"></div>
+        </div>
+        <div class="eventos-col-card eventos-col-bad">
+          <div class="eventos-col-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Eventos que no cumplen el criterio
+            <span class="eventos-col-count" id="eventos-count-bad">0</span>
+          </div>
+          <div class="eventos-col-list" id="eventos-list-bad"></div>
+        </div>
+      </div>
+
+      <div class="table-card" style="margin-top:20px">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>N° Apnea</th>
+                <th>Hora</th>
+                <th>Duración</th>
+                <th>SpO₂</th>
+                <th>Caída vs. basal</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="eventos-tabla-comparativa"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     PANTALLA: SEGUIMIENTO DE LAS APNEAS (apartado 03 del resumen)
+══════════════════════════════ -->
+<div id="screen-seguimiento-apneas" class="screen">
+  <div class="topbar">
+    <button class="topbar-btn-back" id="btn-back-seguimiento-apneas">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Volver
+    </button>
+    <div class="topbar-breadcrumb">
+      <span id="breadcrumb-paciente-seguimiento"></span>
+      <span class="sep">›</span>
+      <span>Seguimiento de las apneas</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <button class="btn-logout" id="btn-logout-seguimiento">Cerrar sesión</button>
+  </div>
+  <div class="page-content">
+    <div class="page-header">
+      <h1>Seguimiento de las apneas</h1>
+      <p>Evolución de eventos confirmados frente al total registrado, sesión por sesión</p>
+    </div>
+    <div class="summary-bar" id="seguimiento-summary-bar"></div>
+    <div class="chart-wrap" style="height:360px;padding:20px">
+      <div class="chart-label" style="position:static;margin-bottom:10px">Eventos confirmados por sesión</div>
+      <div class="chart-inner" style="height:300px">
+        <canvas id="chart-seguimiento"></canvas>
       </div>
     </div>
   </div>
@@ -1161,6 +1470,10 @@ const screens = {
   hub:         document.getElementById('screen-hub'),
   historial:   document.getElementById('screen-historial'),
   epworth:     document.getElementById('screen-epworth'),
+  resumen:               document.getElementById('screen-resumen'),
+  resumenGeneral:        document.getElementById('screen-resumen-general'),
+  eventosConfirmados:    document.getElementById('screen-eventos-confirmados'),
+  seguimientoApneas:     document.getElementById('screen-seguimiento-apneas'),
   secciones:   document.getElementById('screen-secciones'),
   horas:       document.getElementById('screen-horas'),
   detalle:     document.getElementById('screen-detalle'),
@@ -1412,7 +1725,7 @@ document.getElementById('btn-back-hub').addEventListener('click', () => show('pa
 document.getElementById('hub-card-secciones').addEventListener('click', () => abrirSecciones());
 document.getElementById('hub-card-historial').addEventListener('click', () => abrirHistorial());
 document.getElementById('hub-card-epworth').addEventListener('click', () => abrirEpworth());
-document.getElementById('hub-card-resumen').addEventListener('click', () => toast('Este apartado estará disponible próximamente'));
+document.getElementById('hub-card-resumen').addEventListener('click', () => abrirResumenMonitoreo());
 
 async function abrirPaciente(paciente) {
   state.paciente = paciente;
@@ -1519,6 +1832,8 @@ function abrirHistorial() {
     catEl.style.color = cat.color;
     catEl.style.borderColor = cat.border;
   }
+
+  abrirHistorialEpworth();
 }
 
 function pintarOpciones(contId, valorActivo) {
@@ -1593,22 +1908,18 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
 });
 
 /* ════════════════════════════════════════════════════════════
-   ENCUESTA DE EPWORTH
+   ENCUESTA DE EPWORTH (funciones genéricas por prefijo de IDs,
+   reutilizadas en la pantalla independiente "epworth-*" y en la
+   versión integrada dentro de Historial médico "historial-epworth-*")
 ════════════════════════════════════════════════════════════ */
 document.getElementById('btn-back-epworth').addEventListener('click', () => show('hub'));
 
-function abrirEpworth() {
-  const pac = state.paciente;
-  document.getElementById('breadcrumb-paciente-epworth').textContent = pac.nombre;
-  show('epworth');
-
-  state.epworthRespuestas = new Array(8).fill(null);
-
-  const cont = document.getElementById('epworth-questions');
+function renderEpworthQuestions(prefix, respuestasArr) {
+  const cont = document.getElementById(`${prefix}-questions`);
   cont.innerHTML = EPWORTH_PREGUNTAS.map((texto, i) => `
     <div class="epworth-q">
       <div class="epworth-q-text"><strong>${i+1}.</strong> ${texto}</div>
-      <select class="epworth-select" id="epworth-sel-${i}" data-idx="${i}">
+      <select class="epworth-select" id="${prefix}-sel-${i}" data-idx="${i}">
         <option value="">— Seleccionar —</option>
         <option value="0">0 — Nunca</option>
         <option value="1">1 — Probabilidad baja</option>
@@ -1621,32 +1932,18 @@ function abrirEpworth() {
   cont.querySelectorAll('.epworth-select').forEach(sel => {
     sel.addEventListener('change', () => {
       const idx = parseInt(sel.dataset.idx);
-      state.epworthRespuestas[idx] = sel.value === '' ? null : parseInt(sel.value);
-      actualizarTotalEpworth();
+      respuestasArr[idx] = sel.value === '' ? null : parseInt(sel.value);
+      actualizarTotalEpworthGenerico(prefix, respuestasArr);
     });
   });
-
-  const banner = document.getElementById('epworth-banner');
-  if (pac.epworth != null) {
-    banner.style.display = 'flex';
-    banner.classList.remove('is-empty');
-    banner.innerHTML = `<span>Puntaje guardado previamente: <strong>${pac.epworth}</strong> — al completar y guardar de nuevo se reemplazará.</span>`;
-  } else {
-    banner.style.display = 'flex';
-    banner.classList.add('is-empty');
-    banner.innerHTML = `<span>Esta encuesta aún no se ha realizado para este paciente.</span>`;
-  }
-
-  actualizarTotalEpworth();
 }
 
-function actualizarTotalEpworth() {
-  const respuestas = state.epworthRespuestas;
-  const respondidas = respuestas.filter(v => v != null);
+function actualizarTotalEpworthGenerico(prefix, respuestasArr) {
+  const respondidas = respuestasArr.filter(v => v != null);
   const total = respondidas.reduce((a,b) => a+b, 0);
-  const box = document.getElementById('epworth-total-box');
-  const valorEl = document.getElementById('epworth-total-valor');
-  const interpEl = document.getElementById('epworth-total-interp');
+  const box = document.getElementById(`${prefix}-total-box`);
+  const valorEl = document.getElementById(`${prefix}-total-valor`);
+  const interpEl = document.getElementById(`${prefix}-total-interp`);
 
   valorEl.textContent = total;
 
@@ -1663,6 +1960,31 @@ function actualizarTotalEpworth() {
   box.style.background = interp.bg;
   interpEl.style.color = interp.color;
   interpEl.textContent = interp.texto;
+}
+
+function pintarBannerEpworth(bannerId, pac) {
+  const banner = document.getElementById(bannerId);
+  if (pac.epworth != null) {
+    banner.style.display = 'flex';
+    banner.classList.remove('is-empty');
+    banner.innerHTML = `<span>Puntaje guardado previamente: <strong>${pac.epworth}</strong> — al completar y guardar de nuevo se reemplazará.</span>`;
+  } else {
+    banner.style.display = 'flex';
+    banner.classList.add('is-empty');
+    banner.innerHTML = `<span>Esta encuesta aún no se ha realizado para este paciente.</span>`;
+  }
+}
+
+/* ─── Pantalla independiente de Epworth ─── */
+function abrirEpworth() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-epworth').textContent = pac.nombre;
+  show('epworth');
+
+  state.epworthRespuestas = new Array(8).fill(null);
+  renderEpworthQuestions('epworth', state.epworthRespuestas);
+  pintarBannerEpworth('epworth-banner', pac);
+  actualizarTotalEpworthGenerico('epworth', state.epworthRespuestas);
 }
 
 document.getElementById('btn-guardar-epworth').addEventListener('click', async () => {
@@ -1682,6 +2004,37 @@ document.getElementById('btn-guardar-epworth').addEventListener('click', async (
     abrirEpworth(); // refrescar banner
   } else {
     toast('Error al guardar la encuesta', 'err');
+  }
+});
+
+/* ─── Versión integrada de Epworth dentro de Historial médico ─── */
+state.historialEpworthRespuestas = new Array(8).fill(null);
+
+function abrirHistorialEpworth() {
+  const pac = state.paciente;
+  state.historialEpworthRespuestas = new Array(8).fill(null);
+  renderEpworthQuestions('historial-epworth', state.historialEpworthRespuestas);
+  pintarBannerEpworth('historial-epworth-banner', pac);
+  actualizarTotalEpworthGenerico('historial-epworth', state.historialEpworthRespuestas);
+}
+
+document.getElementById('btn-guardar-historial-epworth').addEventListener('click', async () => {
+  const respuestas = state.historialEpworthRespuestas;
+  if (respuestas.some(v => v == null)) {
+    toast('Responda las 8 preguntas de Epworth antes de guardar', 'err');
+    return;
+  }
+  const total = respuestas.reduce((a,b) => a+b, 0);
+  const btn = document.getElementById('btn-guardar-historial-epworth');
+  btn.disabled = true;
+  const ok = await guardarPaciente({ epworth: total });
+  btn.disabled = false;
+  if (ok) {
+    toast(`Epworth guardado — puntaje total: ${total}`, 'ok');
+    actualizarEstadosHub();
+    abrirHistorialEpworth(); // refrescar banner
+  } else {
+    toast('Error al guardar el Epworth', 'err');
   }
 });
 
@@ -2844,6 +3197,291 @@ async function generarPDF() {
   btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> PDF`;
   toast('PDF generado correctamente', 'ok');
 }
+
+/* ════════════════════════════════════════════════════════════
+   RESUMEN DEL MONITOREO (hub de 3 apartados)
+════════════════════════════════════════════════════════════ */
+document.getElementById('btn-back-resumen').addEventListener('click', () => show('hub'));
+document.getElementById('btn-back-resumen-general').addEventListener('click', () => show('resumen'));
+document.getElementById('btn-back-eventos-confirmados').addEventListener('click', () => show('resumen'));
+document.getElementById('btn-back-seguimiento-apneas').addEventListener('click', () => show('resumen'));
+['btn-logout-resumen','btn-logout-resumen-general','btn-logout-eventos','btn-logout-seguimiento'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    state = { ...state, usuario:null, paciente:null };
+    document.getElementById('inp-user').value='';
+    document.getElementById('inp-pass').value='';
+    show('login');
+  });
+});
+
+document.getElementById('hub-card-resumen-general').addEventListener('click', () => abrirResumenGeneral());
+document.getElementById('hub-card-eventos-confirmados').addEventListener('click', () => abrirEventosConfirmados());
+document.getElementById('hub-card-seguimiento-apneas').addEventListener('click', () => abrirSeguimientoApneas());
+
+function abrirResumenMonitoreo() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-resumen').textContent = pac.nombre;
+  show('resumen');
+}
+
+/* ─── Criterio clínico de verificación de apnea (AASM, con datos disponibles) ───
+   Verdadera  : duracion_segundos >= 10  Y  spo2 <= (96 - 3) = 93
+   Falsa      : cualquier otro caso
+   La línea base de SpO2 se fija en 96% (estándar acordado), no se calcula por paciente. */
+const SPO2_BASAL = 96;
+const SPO2_CAIDA_MIN = 3;
+const DURACION_MIN_SEG = 10;
+
+function evaluarApnea(d) {
+  const duracionOk = (d.duracion_segundos != null) && (d.duracion_segundos >= DURACION_MIN_SEG);
+  const caida = d.spo2 != null ? (SPO2_BASAL - d.spo2) : null;
+  const spo2Ok = caida != null && caida >= SPO2_CAIDA_MIN;
+  return {
+    confirmada: duracionOk && spo2Ok,
+    duracionOk, spo2Ok,
+    caida: caida != null ? Math.round(caida*10)/10 : null
+  };
+}
+
+/* ─── Helper: trae todas las horas + interrupciones de todas las sesiones del paciente ─── */
+async function cargarTodasLasInterrupciones() {
+  const pac = state.paciente;
+  let sesiones = state.sesiones;
+  if (!sesiones || !sesiones.length) {
+    sesiones = await api(`/sesiones/por-paciente/${pac.id}`) || [];
+    state.sesiones = sesiones;
+  }
+  const resultado = []; // { sesionId, sesionFecha, horaId, horaLabel, interrupcion }
+  for (const s of sesiones) {
+    const horas = await api(`/horas-sesion/${s.id}`) || [];
+    for (const h of horas) {
+      const interr = await api(`/interrupciones/${h.id}`) || [];
+      interr.forEach(d => {
+        resultado.push({
+          sesionId: s.id, sesionFecha: s.fecha,
+          horaId: h.id, horaLabel: (h.hora_inicio||'--').slice(0,5),
+          interrupcion: d
+        });
+      });
+    }
+  }
+  return resultado;
+}
+
+/* ─── Apartado 01: Resumen general consolidado ─── */
+async function abrirResumenGeneral() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-resumen-general').textContent = pac.nombre;
+  show('resumenGeneral');
+
+  const tbody = document.getElementById('resumen-general-tbody');
+  tbody.innerHTML = '<tr><td colspan="6"><div class="spinner"></div></td></tr>';
+  document.getElementById('resumen-general-summary-bar').innerHTML = '';
+
+  const sesiones = await api(`/sesiones/por-paciente/${pac.id}`) || [];
+  state.sesiones = sesiones;
+
+  if (!sesiones.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state">Sin sesiones registradas para este paciente</div></td></tr>';
+    return;
+  }
+
+  let totalApneasGlobal = 0, totalHorasGlobal = 0;
+  const filas = [];
+  for (const s of sesiones) {
+    const horas = await api(`/horas-sesion/${s.id}`) || [];
+    const totalApneas = horas.reduce((acc,h) => acc + h.total_interrupciones, 0);
+    const iah = horas.length ? Math.round(totalApneas / horas.length) : 0;
+
+    const sevConteo = { 'AOS Leve':0, 'AOS Moderado':0, 'AOS Grave':0, 'AOS Muy Grave':0 };
+    horas.forEach(h => {
+      const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+      if (g.texto in sevConteo) sevConteo[g.texto]++;
+    });
+    const horasConApnea = horas.filter(h => h.total_interrupciones >= 5);
+    let tipoPredominante = 'Sin apnea detectada';
+    if (horasConApnea.length > 0) {
+      tipoPredominante = Object.entries(sevConteo).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+    }
+
+    totalApneasGlobal += totalApneas;
+    totalHorasGlobal += horas.length;
+
+    filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
+  }
+
+  const iahGlobal = totalHorasGlobal ? Math.round(totalApneasGlobal / totalHorasGlobal) : 0;
+  document.getElementById('resumen-general-summary-bar').innerHTML = `
+    <div class="summary-card"><div class="label">Sesiones totales</div><div class="value">${sesiones.length}</div><div class="sub">noches registradas</div></div>
+    <div class="summary-card"><div class="label">Horas totales</div><div class="value">${totalHorasGlobal}</div><div class="sub">horas de sueño</div></div>
+    <div class="summary-card"><div class="label">Apneas totales</div><div class="value" style="color:var(--accent)">${totalApneasGlobal}</div><div class="sub">en todas las sesiones</div></div>
+    <div class="summary-card"><div class="label">IAH global</div><div class="value">${iahGlobal}</div><div class="sub">eventos/hora</div></div>
+  `;
+
+  tbody.innerHTML = filas.map(f => {
+    const fechaFmt = (f.sesion.fecha||'--').slice(0,16).replace('T',' ');
+    return `
+      <tr>
+        <td><strong>Sesión #${f.sesion.id}</strong></td>
+        <td class="sec">${fechaFmt}</td>
+        <td class="sec">${f.horas}</td>
+        <td>${f.totalApneas}</td>
+        <td>${f.iah}</td>
+        <td>${f.tipoPredominante}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ─── Apartado 02: Eventos confirmados por apnea ─── */
+async function abrirEventosConfirmados() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-eventos').textContent = pac.nombre;
+  show('eventosConfirmados');
+
+  document.getElementById('eventos-resultado-wrap').style.display = 'none';
+  const grid = document.getElementById('eventos-selector-grid');
+  grid.innerHTML = '<div style="grid-column:1/-1"><div class="spinner"></div></div>';
+
+  const sesiones = await api(`/sesiones/por-paciente/${pac.id}`) || [];
+  state.sesiones = sesiones;
+
+  if (!sesiones.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--txt-sec)">Sin sesiones registradas para este paciente</div>';
+    return;
+  }
+
+  grid.innerHTML = sesiones.map((s,i) => {
+    const fechaFmt = (s.fecha||'--').slice(0,16).replace('T',' ');
+    return `
+      <div class="seccion-card" data-sidx="${i}">
+        <div class="seccion-card-label">Sesión #${s.id}</div>
+        <div class="seccion-card-fecha">${fechaFmt}</div>
+        <div class="seccion-card-sub">Ver eventos confirmados</div>
+      </div>
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.seccion-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const s = sesiones[parseInt(card.dataset.sidx)];
+      evaluarEventosDeSesion(s);
+    });
+  });
+}
+
+async function evaluarEventosDeSesion(sesion) {
+  const wrap = document.getElementById('eventos-resultado-wrap');
+  wrap.style.display = 'block';
+  document.getElementById('eventos-list-ok').innerHTML = '<div class="spinner" style="margin:30px auto"></div>';
+  document.getElementById('eventos-list-bad').innerHTML = '';
+  document.getElementById('eventos-tabla-comparativa').innerHTML = '';
+
+  const horas = await api(`/horas-sesion/${sesion.id}`) || [];
+  const verdaderas = [], falsas = [];
+
+  for (const h of horas) {
+    const interr = await api(`/interrupciones/${h.id}`) || [];
+    interr.forEach((d,i) => {
+      const num = d.numero_consecutivo || d.numero_interrupcion || i+1;
+      const horaLabel = (h.hora_inicio||'--').slice(0,5);
+      const ev = evaluarApnea(d);
+      const item = { d, num, horaLabel, ev };
+      if (ev.confirmada) verdaderas.push(item); else falsas.push(item);
+    });
+  }
+
+  document.getElementById('eventos-count-ok').textContent = verdaderas.length;
+  document.getElementById('eventos-count-bad').textContent = falsas.length;
+
+  const renderLista = (arr) => arr.length ? arr.map(it => `
+      <div class="eventos-item">
+        <span>Apnea #${it.num} · Hora ${it.horaLabel}</span>
+        <span class="ei-meta">${it.d.duracion_segundos}s · SpO₂ ${it.d.spo2}%</span>
+      </div>
+    `).join('') : '<div class="eventos-empty">Sin eventos en esta categoría</div>';
+
+  document.getElementById('eventos-list-ok').innerHTML = renderLista(verdaderas);
+  document.getElementById('eventos-list-bad').innerHTML = renderLista(falsas);
+
+  const todos = [...verdaderas, ...falsas].sort((a,b) => a.num - b.num);
+  document.getElementById('eventos-tabla-comparativa').innerHTML = todos.map(it => {
+    const caidaTxt = it.ev.caida != null ? `${it.ev.caida} pts` : '--';
+    const chip = it.ev.confirmada
+      ? '<span class="resultado-chip ok">✓ Confirmada</span>'
+      : '<span class="resultado-chip bad">✕ No confirmada</span>';
+    return `
+      <tr>
+        <td><strong>#${it.num}</strong></td>
+        <td class="sec">${it.horaLabel}</td>
+        <td>${it.d.duracion_segundos} s</td>
+        <td>${it.d.spo2}%</td>
+        <td class="sec">${caidaTxt}</td>
+        <td>${chip}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ─── Apartado 03: Seguimiento de las apneas ─── */
+let chartSeguimiento = null;
+
+async function abrirSeguimientoApneas() {
+  const pac = state.paciente;
+  document.getElementById('breadcrumb-paciente-seguimiento').textContent = pac.nombre;
+  show('seguimientoApneas');
+
+  document.getElementById('seguimiento-summary-bar').innerHTML = '<div class="summary-card"><div class="label">Cargando…</div></div>';
+
+  const todas = await cargarTodasLasInterrupciones();
+
+  // Agrupar por sesión
+  const porSesion = new Map();
+  todas.forEach(it => {
+    if (!porSesion.has(it.sesionId)) porSesion.set(it.sesionId, { fecha: it.sesionFecha, confirmadas: 0, total: 0 });
+    const g = porSesion.get(it.sesionId);
+    g.total++;
+    if (evaluarApnea(it.interrupcion).confirmada) g.confirmadas++;
+  });
+
+  const sesionesOrdenadas = [...porSesion.entries()].sort((a,b) => (a[1].fecha||'').localeCompare(b[1].fecha||''));
+
+  const totalEventos = todas.length;
+  const totalConfirmados = todas.filter(it => evaluarApnea(it.interrupcion).confirmada).length;
+  const pctConfirmados = totalEventos ? Math.round((totalConfirmados/totalEventos)*100) : 0;
+
+  document.getElementById('seguimiento-summary-bar').innerHTML = `
+    <div class="summary-card"><div class="label">Eventos totales</div><div class="value">${totalEventos}</div><div class="sub">en todas las sesiones</div></div>
+    <div class="summary-card"><div class="label">Confirmados</div><div class="value" style="color:var(--ok)">${totalConfirmados}</div><div class="sub">cumplen criterio AASM</div></div>
+    <div class="summary-card"><div class="label">No confirmados</div><div class="value" style="color:var(--crit)">${totalEventos-totalConfirmados}</div><div class="sub">no cumplen criterio</div></div>
+    <div class="summary-card"><div class="label">% confirmación</div><div class="value">${pctConfirmados}%</div><div class="sub">del total de eventos</div></div>
+  `;
+
+  if (chartSeguimiento) { chartSeguimiento.destroy(); chartSeguimiento = null; }
+  const labels = sesionesOrdenadas.map(([sid]) => `Sesión #${sid}`);
+  const confirmadasData = sesionesOrdenadas.map(([,g]) => g.confirmadas);
+  const noConfirmadasData = sesionesOrdenadas.map(([,g]) => g.total - g.confirmadas);
+
+  chartSeguimiento = new Chart(document.getElementById('chart-seguimiento'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Confirmadas', data: confirmadasData, backgroundColor: '#27AE60', borderRadius: 4 },
+        { label: 'No confirmadas', data: noConfirmadasData, backgroundColor: '#E0A0A0', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks:{color:'#5A7A8A',font:{size:11}}, grid:{display:false} },
+        y: { stacked: true, ticks:{color:'#5A7A8A',font:{size:11}}, grid:{color:'#EBF4FA'} }
+      },
+      plugins: { legend: { position:'bottom', labels:{color:'#5A7A8A',font:{size:11}} } }
+    }
+  });
+}
+
 </script>
 </body>
 </html>
