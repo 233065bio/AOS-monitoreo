@@ -3396,7 +3396,8 @@ async function abrirResumenGeneral() {
 
     filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
   }
-   // Tipo global predominante (todas las sesiones combinadas)
+
+  // Tipo global predominante (todas las sesiones combinadas)
   let tipoGlobalPredominante = 'Sin apnea detectada';
   let tipoGlobalCls = 'sev-none';
   const clsMap = {'AOS Leve':'sev-leve','AOS Moderado':'sev-moderado','AOS Grave':'sev-grave','AOS Muy Grave':'sev-muy-grave'};
