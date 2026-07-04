@@ -928,6 +928,17 @@ tbody td.sec{color:var(--txt-sec)}
             <input type="number" class="form-input-num" id="hist-peso" min="0" max="400" step="0.1" placeholder="Ej. 78"/>
             <span class="input-suffix">kg</span>
           </div>
+           <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">6</span> ¿Cuántas veces por noche el paciente siente que se despierta o "microdespierta"?</div>
+            <div class="opt-row" id="hist-microdesp-opts">
+              <button class="opt-btn" data-val="nunca">Nunca</button>
+              <button class="opt-btn" data-val="1-4">1–4 veces</button>
+              <button class="opt-btn" data-val="5-14">5–14 veces</button>
+              <button class="opt-btn" data-val="15-29">15–29 veces</button>
+              <button class="opt-btn" data-val="30-49">30–49 veces</button>
+              <button class="opt-btn" data-val="50+">50+ veces</button>
+            </div>
+          </div>
           <div class="form-q">
             <div class="form-q-label" style="margin-bottom:0">Índice de masa corporal (IMC)</div>
             <div class="imc-box">
@@ -1108,6 +1119,23 @@ tbody td.sec{color:var(--txt-sec)}
       <p>Totales de todas las sesiones de monitoreo registradas para este paciente</p>
     </div>
     <div class="summary-bar" id="resumen-general-summary-bar"></div>
+     
+    <div class="criterio-box" id="resumen-general-comparacion" style="display:none">
+      <div class="criterio-box-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Comparación: sospecha por historial vs. estimado por monitoreo
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:11px;color:var(--txt-sec);font-weight:700;text-transform:uppercase;margin-bottom:6px">Sospechado según historial</div>
+          <span class="severity-chip" id="chip-sospecha-historial">—</span>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <div style="font-size:11px;color:var(--txt-sec);font-weight:700;text-transform:uppercase;margin-bottom:6px">Estimado según monitoreo (global)</div>
+          <span class="severity-chip" id="chip-estimado-monitoreo">—</span>
+        </div>
+      </div>
+    </div>
     <div class="table-card">
       <div class="table-wrap">
         <table>
@@ -1445,8 +1473,9 @@ let state = {
   ecgYMin: -5, ecgYMax: 5,
   fcCalculada: null,
   // Formularios
-  histCardio: null,   // 'Si' | 'No'
-  histSexo: null,     // 'M' | 'F'
+  histCardio: null,       // 'Si' | 'No'
+  histSexo: null,         // 'M' | 'F'
+  histMicrodesp: null,    // 'nunca' | '1-4' | '5-14' | '15-29' | '30+'
   epworthRespuestas: new Array(8).fill(null)
 };
 
@@ -1583,6 +1612,45 @@ function calcularGravedad(n, epworth, imc, cv) {
   if (n <= 29) return { texto:'AOS Moderado', cls:'sev-moderado' };
   if (n <= 49) return { texto:'AOS Grave', cls:'sev-grave' };
   return { texto:'AOS Muy Grave', cls:'sev-muy-grave' };
+}
+   /* ─── Estimación de apnea sospechada según historial (tabla de riesgo combinado) ─── */
+function nivelIAHMicrodespertares(v) {
+  const map = { 'nunca':0, '1-4':0, '5-14':1, '15-29':2, '30-49':3, '50+':4 };
+  return (v != null && v in map) ? map[v] : null;
+}
+function nivelEpworthTabla(ep) {
+  if (ep == null) return null;
+  if (ep < 10) return 1;
+  if (ep <= 14) return 2;
+  if (ep <= 19) return 3;
+  return 4;
+}
+function nivelIMCTabla(imc) {
+  if (imc == null) return null;
+  if (imc < 25) return 1;
+  if (imc <= 29) return 2;
+  if (imc <= 39) return 3;
+  return 4;
+}
+function nivelCVTabla(cv) {
+  if (cv == null) return null;
+  return cv === 'Si' ? 2 : 1;
+}
+const NIVEL_SEV_TEXTO = ['Sin apnea sospechada','AOS Leve','AOS Moderado','AOS Grave','AOS Muy Grave'];
+const NIVEL_SEV_CLASE = ['sev-none','sev-leve','sev-moderado','sev-grave','sev-muy-grave'];
+
+function estimarApneaSospechadaHistorial(pac) {
+  const nIAH = nivelIAHMicrodespertares(pac.microdespertares);
+  const nEp  = nivelEpworthTabla(pac.epworth);
+  const nImc = nivelIMCTabla(pac.imc);
+  const nCv  = nivelCVTabla(pac.enfermedad_cardiovascular);
+  const niveles = [nIAH, nEp, nImc, nCv].filter(v => v != null);
+  if (!niveles.length) return { texto:'Datos insuficientes', cls:'sev-none' };
+  if (nIAH === 0 && niveles.every(n => n <= 1)) {
+    return { texto:'Sin apnea sospechada', cls:'sev-none' };
+  }
+  const max = Math.max(...niveles);
+  return { texto: NIVEL_SEV_TEXTO[max], cls: NIVEL_SEV_CLASE[max] };
 }
 
 /* ─── IMC helpers ─── */
@@ -1757,6 +1825,7 @@ async function guardarPaciente(camposNuevos) {
     enfermedad_cardiovascular: pac.enfermedad_cardiovascular || null,
     imc: pac.imc != null ? pac.imc : null,
     epworth: pac.epworth != null ? pac.epworth : null,
+    microdespertares: pac.microdespertares != null ? pac.microdespertares : null,
     ...camposNuevos
   };
   try {
@@ -1792,6 +1861,7 @@ function abrirHistorial() {
   state.histCardio = pac.enfermedad_cardiovascular === 'Si' ? 'Si' : (pac.enfermedad_cardiovascular === 'No' ? 'No' : null);
   state.histSexo = (pac.sexo === 'M' || pac.sexo === 'F') ? pac.sexo : null;
   document.getElementById('hist-edad').value = pac.edad != null ? pac.edad : '';
+  state.histMicrodesp = pac.microdespertares || null;
   // No se guarda la talla directamente en la BD (solo el IMC resultante); si ya hay un IMC previo,
   // dejamos los campos de talla/peso vacíos para que el usuario los reingrese si quiere recalcular.
   document.getElementById('hist-talla').value = '';
@@ -1799,6 +1869,7 @@ function abrirHistorial() {
 
   pintarOpciones('hist-cardio-opts', state.histCardio);
   pintarOpciones('hist-sexo-opts', state.histSexo);
+  pintarOpciones('hist-microdesp-opts', state.histMicrodesp);
   actualizarIMCPreview();
 
   const tieneAlgo = pac.edad != null || pac.sexo || pac.enfermedad_cardiovascular || pac.imc != null;
@@ -1843,6 +1914,12 @@ document.getElementById('hist-sexo-opts').addEventListener('click', e => {
   state.histSexo = btn.dataset.val;
   pintarOpciones('hist-sexo-opts', state.histSexo);
 });
+document.getElementById('hist-microdesp-opts').addEventListener('click', e => {
+  const btn = e.target.closest('.opt-btn');
+  if (!btn) return;
+  state.histMicrodesp = btn.dataset.val;
+  pintarOpciones('hist-microdesp-opts', state.histMicrodesp);
+});
 
 function actualizarIMCPreview() {
   const talla = parseFloat(document.getElementById('hist-talla').value);
@@ -1866,9 +1943,10 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
   const tallaVal = parseFloat(document.getElementById('hist-talla').value);
   const pesoVal = parseFloat(document.getElementById('hist-peso').value);
 
-  if (!state.histCardio) { toast('Seleccione si el paciente tiene enfermedad cardiovascular', 'err'); return; }
-  if (!state.histSexo)   { toast('Seleccione el género del paciente', 'err'); return; }
-  if (!edadVal)           { toast('Ingrese la edad del paciente', 'err'); return; }
+  if (!state.histCardio)   { toast('Seleccione si el paciente tiene enfermedad cardiovascular', 'err'); return; }
+  if (!state.histSexo)     { toast('Seleccione el género del paciente', 'err'); return; }
+  if (!edadVal)            { toast('Ingrese la edad del paciente', 'err'); return; }
+  if (!state.histMicrodesp){ toast('Seleccione la frecuencia de microdespertares', 'err'); return; }
 
   let imcCalculado = state.paciente.imc != null ? state.paciente.imc : null;
   if (tallaVal && pesoVal) {
@@ -1883,7 +1961,8 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
     enfermedad_cardiovascular: state.histCardio,
     sexo: state.histSexo,
     edad: parseInt(edadVal),
-    imc: imcCalculado
+    imc: imcCalculado,
+    microdespertares: state.histMicrodesp
   });
   btn.disabled = false;
 
@@ -3276,6 +3355,8 @@ async function abrirResumenGeneral() {
   }
 
   let totalApneasGlobal = 0, totalHorasGlobal = 0;
+  const sevConteoGlobal = { 'AOS Leve':0, 'AOS Moderado':0, 'AOS Grave':0, 'AOS Muy Grave':0 };
+  let horasConApneaGlobal = 0;
   const filas = [];
   for (const s of sesiones) {
     const horas = await api(`/horas-sesion/${s.id}`) || [];
@@ -3295,9 +3376,28 @@ async function abrirResumenGeneral() {
 
     totalApneasGlobal += totalApneas;
     totalHorasGlobal += horas.length;
+    horasConApneaGlobal += horasConApnea.length;
+    Object.keys(sevConteo).forEach(k => sevConteoGlobal[k] += sevConteo[k]);
 
     filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
   }
+   // Tipo global predominante (todas las sesiones combinadas)
+  let tipoGlobalPredominante = 'Sin apnea detectada';
+  let tipoGlobalCls = 'sev-none';
+  const clsMap = {'AOS Leve':'sev-leve','AOS Moderado':'sev-moderado','AOS Grave':'sev-grave','AOS Muy Grave':'sev-muy-grave'};
+  if (horasConApneaGlobal > 0) {
+    tipoGlobalPredominante = Object.entries(sevConteoGlobal).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+    tipoGlobalCls = clsMap[tipoGlobalPredominante];
+  }
+
+  const sospecha = estimarApneaSospechadaHistorial(pac);
+  document.getElementById('resumen-general-comparacion').style.display = 'block';
+  const chipHist = document.getElementById('chip-sospecha-historial');
+  chipHist.textContent = '● ' + sospecha.texto;
+  chipHist.className = 'severity-chip ' + sospecha.cls;
+  const chipMon = document.getElementById('chip-estimado-monitoreo');
+  chipMon.textContent = '● ' + tipoGlobalPredominante;
+  chipMon.className = 'severity-chip ' + tipoGlobalCls;
 
   const iahGlobal = totalHorasGlobal ? Math.round(totalApneasGlobal / totalHorasGlobal) : 0;
   document.getElementById('resumen-general-summary-bar').innerHTML = `
