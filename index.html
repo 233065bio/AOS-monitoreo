@@ -1191,21 +1191,10 @@ tbody td.sec{color:var(--txt-sec)}
         </div>
       </div>
 
-      <div class="table-card" style="margin-top:20px">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>N° Apnea</th>
-                <th>Hora</th>
-                <th>Duración</th>
-                <th>SpO₂</th>
-                <th>Caída vs. basal</th>
-                <th>Resultado</th>
-              </tr>
-            </thead>
-            <tbody id="eventos-tabla-comparativa"></tbody>
-          </table>
+       <div class="chart-wrap" style="height:360px;padding:20px;margin-top:20px">
+        <div class="chart-label" style="position:static;margin-bottom:10px">Eventos confirmados por hora — esta sesión</div>
+        <div class="chart-inner" style="height:300px">
+          <canvas id="chart-eventos-hora"></canvas>
         </div>
       </div>
     </div>
@@ -3375,7 +3364,6 @@ async function evaluarEventosDeSesion(sesion) {
   wrap.style.display = 'block';
   document.getElementById('eventos-list-ok').innerHTML = '<div class="spinner" style="margin:30px auto"></div>';
   document.getElementById('eventos-list-bad').innerHTML = '';
-  document.getElementById('eventos-tabla-comparativa').innerHTML = '';
 
   const horas = await api(`/horas-sesion/${sesion.id}`) || [];
   const verdaderas = [], falsas = [];
@@ -3404,26 +3392,42 @@ async function evaluarEventosDeSesion(sesion) {
   document.getElementById('eventos-list-ok').innerHTML = renderLista(verdaderas);
   document.getElementById('eventos-list-bad').innerHTML = renderLista(falsas);
 
-  const todos = [...verdaderas, ...falsas].sort((a,b) => a.num - b.num);
-  document.getElementById('eventos-tabla-comparativa').innerHTML = todos.map(it => {
-    const caidaTxt = it.ev.caida != null ? `${it.ev.caida} pts` : '--';
-    const chip = it.ev.confirmada
-      ? '<span class="resultado-chip ok">✓ Confirmada</span>'
-      : '<span class="resultado-chip bad">✕ No confirmada</span>';
-    return `
-      <tr>
-        <td><strong>#${it.num}</strong></td>
-        <td class="sec">${it.horaLabel}</td>
-        <td>${it.d.duracion_segundos} s</td>
-        <td>${it.d.spo2}%</td>
-        <td class="sec">${caidaTxt}</td>
-        <td>${chip}</td>
-      </tr>
-    `;
-  }).join('');
-}
+  // Agrupar por hora para la gráfica de barras apiladas
+  const porHora = new Map();
+  [...verdaderas, ...falsas].forEach(it => {
+    if (!porHora.has(it.horaLabel)) porHora.set(it.horaLabel, { confirmadas: 0, total: 0 });
+    const g = porHora.get(it.horaLabel);
+    g.total++;
+    if (it.ev.confirmada) g.confirmadas++;
+  });
 
+  const horasOrdenadas = [...porHora.entries()].sort((a,b) => a[0].localeCompare(b[0]));
+  const labelsHora = horasOrdenadas.map(([h]) => h);
+  const confirmadasHora = horasOrdenadas.map(([,g]) => g.confirmadas);
+  const noConfirmadasHora = horasOrdenadas.map(([,g]) => g.total - g.confirmadas);
+
+  if (chartEventosHora) { chartEventosHora.destroy(); chartEventosHora = null; }
+  chartEventosHora = new Chart(document.getElementById('chart-eventos-hora'), {
+    type: 'bar',
+    data: {
+      labels: labelsHora,
+      datasets: [
+        { label: 'Confirmadas', data: confirmadasHora, backgroundColor: '#27AE60', borderRadius: 4 },
+        { label: 'No confirmadas', data: noConfirmadasHora, backgroundColor: '#E0A0A0', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks:{color:'#5A7A8A',font:{size:11}}, grid:{display:false} },
+        y: { stacked: true, ticks:{color:'#5A7A8A',font:{size:11}}, grid:{color:'#EBF4FA'} }
+      },
+      plugins: { legend: { position:'bottom', labels:{color:'#5A7A8A',font:{size:11}} } }
+    }
+  });
+}
 /* ─── Apartado 03: Seguimiento de las apneas ─── */
+let chartEventosHora = null;
 let chartSeguimiento = null;
 
 async function abrirSeguimientoApneas() {
