@@ -3360,19 +3360,34 @@ async function abrirResumenGeneral() {
   const filas = [];
   for (const s of sesiones) {
     const horas = await api(`/horas-sesion/${s.id}`) || [];
-    const totalApneas = horas.reduce((acc,h) => acc + h.total_interrupciones, 0);
+
+    // Para cada hora, contar SOLO las apneas confirmadas (criterio AASM)
+    for (const h of horas) {
+      const interr = await api(`/interrupciones/${h.id}`) || [];
+      h.confirmadas = interr.filter(d => evaluarApnea(d).confirmada).length;
+    }
+
+    const totalApneas = horas.reduce((acc,h) => acc + h.confirmadas, 0);
     const iah = horas.length ? Math.round(totalApneas / horas.length) : 0;
 
     const sevConteo = { 'AOS Leve':0, 'AOS Moderado':0, 'AOS Grave':0, 'AOS Muy Grave':0 };
     horas.forEach(h => {
-      const g = calcularGravedad(h.total_interrupciones, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
+      const g = calcularGravedad(h.confirmadas, pac.epworth, pac.imc, pac.enfermedad_cardiovascular);
       if (g.texto in sevConteo) sevConteo[g.texto]++;
     });
-    const horasConApnea = horas.filter(h => h.total_interrupciones >= 5);
+    const horasConApnea = horas.filter(h => h.confirmadas >= 5);
     let tipoPredominante = 'Sin apnea detectada';
     if (horasConApnea.length > 0) {
       tipoPredominante = Object.entries(sevConteo).reduce((a,b)=>b[1]>a[1]?b:a)[0];
     }
+
+    totalApneasGlobal += totalApneas;
+    totalHorasGlobal += horas.length;
+    horasConApneaGlobal += horasConApnea.length;
+    Object.keys(sevConteo).forEach(k => sevConteoGlobal[k] += sevConteo[k]);
+
+    filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
+  }
 
     totalApneasGlobal += totalApneas;
     totalHorasGlobal += horas.length;
