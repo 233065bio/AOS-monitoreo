@@ -899,23 +899,23 @@ tbody td.sec{color:var(--txt-sec)}
           <h3>Datos clínicos</h3>
         </div>
         <div class="form-card-body" id="historial-body">
-          <div class="form-q">
+           <div class="form-q">
             <div class="form-q-label"><span class="form-q-num">1</span> ¿El paciente tiene alguna enfermedad cardiovascular?</div>
             <div class="opt-row" id="hist-cardio-opts">
               <button class="opt-btn" data-val="Si">Sí</button>
               <button class="opt-btn" data-val="No">No</button>
             </div>
-             <div class="form-q">
-              <div class="form-q-label"><span class="form-q-num">7</span> Según su valoración clínica, ¿cuántas interrupciones respiratorias por hora estima que tiene el paciente?</div>
-              <div class="opt-row" id="hist-interrhora-opts">
-                <button class="opt-btn" data-val="menos5">&lt; 5 (Normal)</button>
-                <button class="opt-btn" data-val="5-14">5–14 (Leve)</button>
-                <button class="opt-btn" data-val="15-29">15–29 (Moderado)</button>
-                <button class="opt-btn" data-val="30-49">30–49 (Grave)</button>
-                <button class="opt-btn" data-val="50+">50+ (Muy grave)</button>
-              </div>
-            </div>   
           </div>
+          <div class="form-q">
+            <div class="form-q-label"><span class="form-q-num">7</span> Según su valoración clínica, ¿cuántas interrupciones respiratorias por hora estima que tiene el paciente?</div>
+            <div class="opt-row" id="hist-interrhora-opts">
+              <button class="opt-btn" data-val="menos5">&lt; 5 (Normal)</button>
+              <button class="opt-btn" data-val="5-14">5–14 (Leve)</button>
+              <button class="opt-btn" data-val="15-29">15–29 (Moderado)</button>
+              <button class="opt-btn" data-val="30-49">30–49 (Grave)</button>
+              <button class="opt-btn" data-val="50+">50+ (Muy grave)</button>
+            </div>
+          </div>  
           <div class="form-q">
             <div class="form-q-label"><span class="form-q-num">2</span> ¿Cuál es el género del paciente?</div>
             <div class="opt-row" id="hist-sexo-opts">
@@ -1655,7 +1655,8 @@ function estimarApneaSospechadaHistorial(pac) {
   const nEp  = nivelEpworthTabla(pac.epworth_estimado);
   const nImc = nivelIMCTabla(pac.imc);
   const nCv  = nivelCVTabla(pac.enfermedad_cardiovascular);
-  const niveles = [nIAH, nEp, nImc, nCv].filter(v => v != null);
+  const nInterrHora = nivelInterrHoraTabla(pac.interrupciones_hora_estimadas);
+  const niveles = [nIAH, nEp, nImc, nCv, nInterrHora].filter(v => v != null);
   if (!niveles.length) return { texto:'Datos insuficientes', cls:'sev-none' };
   if (nIAH === 0 && niveles.every(n => n <= 1)) {
     return { texto:'Sin apnea sospechada', cls:'sev-none' };
@@ -1871,14 +1872,11 @@ function abrirHistorial() {
   document.getElementById('breadcrumb-paciente-historial').textContent = pac.nombre;
   show('historial');
 
-  // Cargar valores existentes
   state.histCardio = pac.enfermedad_cardiovascular === 'Si' ? 'Si' : (pac.enfermedad_cardiovascular === 'No' ? 'No' : null);
   state.histSexo = (pac.sexo === 'M' || pac.sexo === 'F') ? pac.sexo : null;
   document.getElementById('hist-edad').value = pac.edad != null ? pac.edad : '';
   state.histMicrodesp = pac.microdespertares || null;
   state.histInterrHora = pac.interrupciones_hora_estimadas || null;
-  // No se guarda la talla directamente en la BD (solo el IMC resultante); si ya hay un IMC previo,
-  // dejamos los campos de talla/peso vacíos para que el usuario los reingrese si quiere recalcular.
   document.getElementById('hist-talla').value = '';
   document.getElementById('hist-peso').value = '';
 
@@ -1908,6 +1906,9 @@ function abrirHistorial() {
     catEl.style.color = cat.color;
     catEl.style.borderColor = cat.border;
   }
+
+  abrirHistorialEpworth();
+}
 
   function abrirHistorialEpworth() {
   const pac = state.paciente;
@@ -1981,15 +1982,6 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
   if (!edadVal)            { toast('Ingrese la edad del paciente', 'err'); return; }
   if (!state.histMicrodesp){ toast('Seleccione la frecuencia de microdespertares', 'err'); return; }
   if (!state.histInterrHora) { toast('Seleccione la estimación de interrupciones por hora', 'err'); return; }
-   // ...
-   const ok = await guardarPaciente({
-     enfermedad_cardiovascular: state.histCardio,
-     sexo: state.histSexo,
-     edad: parseInt(edadVal),
-     imc: imcCalculado,
-     microdespertares: state.histMicrodesp,
-     interrupciones_hora_estimadas: state.histInterrHora   // ← nuevo
-   });
 
   let imcCalculado = state.paciente.imc != null ? state.paciente.imc : null;
   if (tallaVal && pesoVal) {
@@ -2005,19 +1997,19 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
     sexo: state.histSexo,
     edad: parseInt(edadVal),
     imc: imcCalculado,
-    microdespertares: state.histMicrodesp
+    microdespertares: state.histMicrodesp,
+    interrupciones_hora_estimadas: state.histInterrHora
   });
   btn.disabled = false;
 
   if (ok) {
     toast('Historial médico guardado', 'ok');
     actualizarEstadosHub();
-    abrirHistorial(); // refrescar banner y valores
+    abrirHistorial();
   } else {
     toast('Error al guardar el historial', 'err');
   }
 });
-
 /* ════════════════════════════════════════════════════════════
    ENCUESTA DE EPWORTH (funciones genéricas por prefijo de IDs,
    reutilizadas en la pantalla independiente "epworth-*" y en la
@@ -2136,16 +2128,9 @@ document.getElementById('btn-guardar-historial-epworth').addEventListener('click
     return;
   }
   const total = respuestas.reduce((a,b) => a+b, 0);
-  document.getElementById('btn-guardar-historial-epworth').addEventListener('click', async () => {
-  const respuestas = state.historialEpworthRespuestas;
-  if (respuestas.some(v => v == null)) {
-    toast('Responda las 8 preguntas de Epworth antes de guardar', 'err');
-    return;
-  }
-  const total = respuestas.reduce((a,b) => a+b, 0);
   const btn = document.getElementById('btn-guardar-historial-epworth');
   btn.disabled = true;
-  const ok = await guardarPaciente({ epworth_estimado: total });   // ← antes decía epworth
+  const ok = await guardarPaciente({ epworth_estimado: total });
   btn.disabled = false;
   if (ok) {
     toast(`Estimación Epworth guardada — puntaje: ${total}`, 'ok');
@@ -2155,7 +2140,7 @@ document.getElementById('btn-guardar-historial-epworth').addEventListener('click
     toast('Error al guardar la estimación', 'err');
   }
 });
-
+   
 /* ─── Secciones realizadas (noches de monitoreo) ─── */
 document.getElementById('btn-back-secciones').addEventListener('click', () => show('hub'));
 
@@ -3439,14 +3424,6 @@ async function abrirResumenGeneral() {
     filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
   }
 
-    totalApneasGlobal += totalApneas;
-    totalHorasGlobal += horas.length;
-    horasConApneaGlobal += horasConApnea.length;
-    Object.keys(sevConteo).forEach(k => sevConteoGlobal[k] += sevConteo[k]);
-
-    filas.push({ sesion: s, horas: horas.length, totalApneas, iah, tipoPredominante });
-  }
-
   // Tipo global predominante (todas las sesiones combinadas)
   let tipoGlobalPredominante = 'Sin apnea detectada';
   let tipoGlobalCls = 'sev-none';
@@ -3464,8 +3441,6 @@ async function abrirResumenGeneral() {
   const chipMon = document.getElementById('chip-estimado-monitoreo');
   chipMon.textContent = '● ' + tipoGlobalPredominante;
   chipMon.className = 'severity-chip ' + tipoGlobalCls;
-  const nInterrHora = nivelInterrHoraTabla(pac.interrupciones_hora_estimadas);
-  const niveles = [nIAH, nEp, nImc, nCv, nInterrHora].filter(v => v != null);
 
   const iahGlobal = totalHorasGlobal ? Math.round(totalApneasGlobal / totalHorasGlobal) : 0;
   document.getElementById('resumen-general-summary-bar').innerHTML = `
