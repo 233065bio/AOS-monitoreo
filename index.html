@@ -905,6 +905,16 @@ tbody td.sec{color:var(--txt-sec)}
               <button class="opt-btn" data-val="Si">Sí</button>
               <button class="opt-btn" data-val="No">No</button>
             </div>
+             <div class="form-q">
+              <div class="form-q-label"><span class="form-q-num">7</span> Según su valoración clínica, ¿cuántas interrupciones respiratorias por hora estima que tiene el paciente?</div>
+              <div class="opt-row" id="hist-interrhora-opts">
+                <button class="opt-btn" data-val="menos5">&lt; 5 (Normal)</button>
+                <button class="opt-btn" data-val="5-14">5–14 (Leve)</button>
+                <button class="opt-btn" data-val="15-29">15–29 (Moderado)</button>
+                <button class="opt-btn" data-val="30-49">30–49 (Grave)</button>
+                <button class="opt-btn" data-val="50+">50+ (Muy grave)</button>
+              </div>
+            </div>   
           </div>
           <div class="form-q">
             <div class="form-q-label"><span class="form-q-num">2</span> ¿Cuál es el género del paciente?</div>
@@ -1476,6 +1486,7 @@ let state = {
   histCardio: null,       // 'Si' | 'No'
   histSexo: null,         // 'M' | 'F'
   histMicrodesp: null,    // 'nunca' | '1-4' | '5-14' | '15-29' | '30+'
+  histInterrHora: null,
   epworthRespuestas: new Array(8).fill(null)
 };
 
@@ -1641,7 +1652,7 @@ const NIVEL_SEV_CLASE = ['sev-none','sev-leve','sev-moderado','sev-grave','sev-m
 
 function estimarApneaSospechadaHistorial(pac) {
   const nIAH = nivelIAHMicrodespertares(pac.microdespertares);
-  const nEp  = nivelEpworthTabla(pac.epworth);
+  const nEp  = nivelEpworthTabla(pac.epworth_estimado);
   const nImc = nivelIMCTabla(pac.imc);
   const nCv  = nivelCVTabla(pac.enfermedad_cardiovascular);
   const niveles = [nIAH, nEp, nImc, nCv].filter(v => v != null);
@@ -1652,7 +1663,10 @@ function estimarApneaSospechadaHistorial(pac) {
   const max = Math.max(...niveles);
   return { texto: NIVEL_SEV_TEXTO[max], cls: NIVEL_SEV_CLASE[max] };
 }
-
+function nivelInterrHoraTabla(v) {
+  const map = { 'menos5':0, '5-14':1, '15-29':2, '30-49':3, '50+':4 };
+  return (v != null && v in map) ? map[v] : null;
+}
 /* ─── IMC helpers ─── */
 function calcularIMC(pesoKg, tallaCm) {
   if (!pesoKg || !tallaCm) return null;
@@ -1862,6 +1876,7 @@ function abrirHistorial() {
   state.histSexo = (pac.sexo === 'M' || pac.sexo === 'F') ? pac.sexo : null;
   document.getElementById('hist-edad').value = pac.edad != null ? pac.edad : '';
   state.histMicrodesp = pac.microdespertares || null;
+  state.histInterrHora = pac.interrupciones_hora_estimadas || null;
   // No se guarda la talla directamente en la BD (solo el IMC resultante); si ya hay un IMC previo,
   // dejamos los campos de talla/peso vacíos para que el usuario los reingrese si quiere recalcular.
   document.getElementById('hist-talla').value = '';
@@ -1870,6 +1885,7 @@ function abrirHistorial() {
   pintarOpciones('hist-cardio-opts', state.histCardio);
   pintarOpciones('hist-sexo-opts', state.histSexo);
   pintarOpciones('hist-microdesp-opts', state.histMicrodesp);
+  pintarOpciones('hist-interrhora-opts', state.histInterrHora);
   actualizarIMCPreview();
 
   const tieneAlgo = pac.edad != null || pac.sexo || pac.enfermedad_cardiovascular || pac.imc != null;
@@ -1893,7 +1909,24 @@ function abrirHistorial() {
     catEl.style.borderColor = cat.border;
   }
 
-  abrirHistorialEpworth();
+  function abrirHistorialEpworth() {
+  const pac = state.paciente;
+  state.historialEpworthRespuestas = new Array(8).fill(null);
+  renderEpworthQuestions('historial-epworth', state.historialEpworthRespuestas);
+
+  // usar epworth_estimado, NO epworth
+  const banner = document.getElementById('historial-epworth-banner');
+  if (pac.epworth_estimado != null) {
+    banner.style.display = 'flex';
+    banner.classList.remove('is-empty');
+    banner.innerHTML = `<span>Estimación guardada previamente: <strong>${pac.epworth_estimado}</strong> — al completar y guardar de nuevo se reemplazará.</span>`;
+  } else {
+    banner.style.display = 'flex';
+    banner.classList.add('is-empty');
+    banner.innerHTML = `<span>Aún no hay estimación registrada para este paciente.</span>`;
+  }
+
+  actualizarTotalEpworthGenerico('historial-epworth', state.historialEpworthRespuestas);
 }
 
 function pintarOpciones(contId, valorActivo) {
@@ -1947,6 +1980,16 @@ document.getElementById('btn-guardar-historial').addEventListener('click', async
   if (!state.histSexo)     { toast('Seleccione el género del paciente', 'err'); return; }
   if (!edadVal)            { toast('Ingrese la edad del paciente', 'err'); return; }
   if (!state.histMicrodesp){ toast('Seleccione la frecuencia de microdespertares', 'err'); return; }
+  if (!state.histInterrHora) { toast('Seleccione la estimación de interrupciones por hora', 'err'); return; }
+   // ...
+   const ok = await guardarPaciente({
+     enfermedad_cardiovascular: state.histCardio,
+     sexo: state.histSexo,
+     edad: parseInt(edadVal),
+     imc: imcCalculado,
+     microdespertares: state.histMicrodesp,
+     interrupciones_hora_estimadas: state.histInterrHora   // ← nuevo
+   });
 
   let imcCalculado = state.paciente.imc != null ? state.paciente.imc : null;
   if (tallaVal && pesoVal) {
@@ -2093,16 +2136,23 @@ document.getElementById('btn-guardar-historial-epworth').addEventListener('click
     return;
   }
   const total = respuestas.reduce((a,b) => a+b, 0);
+  document.getElementById('btn-guardar-historial-epworth').addEventListener('click', async () => {
+  const respuestas = state.historialEpworthRespuestas;
+  if (respuestas.some(v => v == null)) {
+    toast('Responda las 8 preguntas de Epworth antes de guardar', 'err');
+    return;
+  }
+  const total = respuestas.reduce((a,b) => a+b, 0);
   const btn = document.getElementById('btn-guardar-historial-epworth');
   btn.disabled = true;
-  const ok = await guardarPaciente({ epworth: total });
+  const ok = await guardarPaciente({ epworth_estimado: total });   // ← antes decía epworth
   btn.disabled = false;
   if (ok) {
-    toast(`Epworth guardado — puntaje total: ${total}`, 'ok');
+    toast(`Estimación Epworth guardada — puntaje: ${total}`, 'ok');
     actualizarEstadosHub();
-    abrirHistorialEpworth(); // refrescar banner
+    abrirHistorialEpworth();
   } else {
-    toast('Error al guardar el Epworth', 'err');
+    toast('Error al guardar la estimación', 'err');
   }
 });
 
@@ -3414,6 +3464,8 @@ async function abrirResumenGeneral() {
   const chipMon = document.getElementById('chip-estimado-monitoreo');
   chipMon.textContent = '● ' + tipoGlobalPredominante;
   chipMon.className = 'severity-chip ' + tipoGlobalCls;
+  const nInterrHora = nivelInterrHoraTabla(pac.interrupciones_hora_estimadas);
+  const niveles = [nIAH, nEp, nImc, nCv, nInterrHora].filter(v => v != null);
 
   const iahGlobal = totalHorasGlobal ? Math.round(totalApneasGlobal / totalHorasGlobal) : 0;
   document.getElementById('resumen-general-summary-bar').innerHTML = `
